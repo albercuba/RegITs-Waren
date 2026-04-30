@@ -2,6 +2,7 @@ import { ClipboardList, Inbox, Mail, Moon, Settings, ShieldCheck, Sun } from "lu
 import { useEffect, useState } from "react";
 import AdminPage from "./pages/AdminPage.jsx";
 import IntakePage from "./pages/IntakePage.jsx";
+import regitsLogo from "./assets/regits_cloud_logo.png";
 
 const navItems = [
   { id: "receiving", label: "Wareneingang", icon: Inbox },
@@ -40,7 +41,10 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="topbar-logo">REGITS-WAREN</div>
+        <div className="topbar-logo">
+          <img src={regitsLogo} alt="" className="topbar-logo-image" />
+          <span>REGITS-WAREN</span>
+        </div>
         <div className="topbar-title">IT-Hardware Wareneingang</div>
         <div className="topbar-right">
           <span className="topbar-count">MVP</span>
