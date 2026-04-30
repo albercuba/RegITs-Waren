@@ -3,6 +3,15 @@ import re
 
 VENDORS = ("Dell", "HP", "HPE", "Lenovo", "Apple", "Microsoft", "Cisco", "Ubiquiti", "Samsung", "iiyama")
 
+PRODUCT_BARCODES = {
+    "4948570127832": {
+        "vendor": "iiyama",
+        "model": "ProLite X2491H",
+        "asset_type": "Monitor",
+        "notes": ("Part Code: X2491H-B1", "BLACK"),
+    },
+}
+
 
 SERIAL_PATTERNS = (
     r"(?:S/N|SN|Serial(?: Number)?|Service Tag)\s*[:#-]?\s*([A-Z0-9-]{5,})",
@@ -61,10 +70,34 @@ def _build_notes(text: str) -> str:
     return ", ".join(dict.fromkeys(notes))
 
 
+def _known_product(text: str, barcodes: list[str]) -> dict[str, str | tuple[str, ...]]:
+    haystack = [re.sub(r"\D", "", value) for value in barcodes]
+    haystack.append(re.sub(r"\D", "", text))
+
+    for barcode, product in PRODUCT_BARCODES.items():
+        if any(barcode in value for value in haystack):
+            return product
+    return {}
+
+
+def _merge_notes(*groups: str | tuple[str, ...]) -> str:
+    notes = []
+    for group in groups:
+        if isinstance(group, tuple):
+            notes.extend(group)
+        elif group:
+            notes.extend(part.strip() for part in group.split(",") if part.strip())
+    return ", ".join(dict.fromkeys(notes))
+
+
 def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, str]:
     clean_text = " ".join(text.split())
     barcodes = barcodes or []
+    product = _known_product(clean_text, barcodes)
     vendor = next((vendor for vendor in VENDORS if re.search(rf"\b{re.escape(vendor)}\b", clean_text, re.I)), "")
+    model = _first_match(MODEL_PATTERNS, clean_text)
+    asset_type = _detect_asset_type(clean_text)
+    notes = _build_notes(clean_text)
 
     serial = _first_match(SERIAL_PATTERNS, clean_text)
     if not serial and barcodes:
@@ -72,8 +105,8 @@ def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, 
 
     return {
         "serial_number": serial,
-        "vendor": vendor,
-        "model": _first_match(MODEL_PATTERNS, clean_text),
-        "asset_type": _detect_asset_type(clean_text),
-        "notes": _build_notes(clean_text),
+        "vendor": vendor or str(product.get("vendor", "")),
+        "model": model or str(product.get("model", "")),
+        "asset_type": asset_type or str(product.get("asset_type", "")),
+        "notes": _merge_notes(notes, product.get("notes", ())),
     }
