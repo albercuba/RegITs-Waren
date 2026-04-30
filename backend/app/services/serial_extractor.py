@@ -71,15 +71,21 @@ def _clean_candidate(value: str) -> str:
     return value.upper().strip(" :/-")
 
 
-def _looks_like_serial(value: str) -> bool:
+def _looks_like_serial(value: str, allow_product_barcode_shape: bool = False) -> bool:
     clean = _clean_candidate(value)
     if not 5 <= len(clean) <= 24:
         return False
-    if clean.isdigit() and len(clean) in {8, 12, 13, 14}:
+    if clean.isdigit() and len(clean) in {8, 12, 13, 14} and not allow_product_barcode_shape:
         return False
     if re.fullmatch(r"\d{2,4}", clean):
         return False
     return bool(re.fullmatch(r"[A-Z0-9-]+", clean))
+
+
+def _looks_like_product_barcode(value: str) -> bool:
+    clean = _clean_candidate(value)
+    digits = re.sub(r"\D", "", clean)
+    return clean.isdigit() and len(digits) in {8, 12, 13, 14}
 
 
 def _keyword_nearby(text: str, start: int, keywords: list[str]) -> bool:
@@ -153,7 +159,8 @@ def _add_candidate(
     vendor: str,
 ) -> None:
     clean = _clean_candidate(value)
-    if not _looks_like_serial(clean):
+    allow_product_barcode_shape = has_keyword or source in {"keyword_serial", "hp_serial", "lenovo_serial"}
+    if not _looks_like_serial(clean, allow_product_barcode_shape):
         return
 
     score, reasons = _score_candidate(clean, base_score, source, line, line_count, has_keyword, vendor)
@@ -176,7 +183,7 @@ def extract_serial(
 
     for barcode in barcodes or []:
         clean = _clean_candidate(re.sub(r"\s+", "", barcode))
-        if not clean:
+        if not clean or _looks_like_product_barcode(clean):
             continue
         candidates[clean] = SerialCandidate(clean, 100, "barcode", None, ["barcode_primary+100"])
 
