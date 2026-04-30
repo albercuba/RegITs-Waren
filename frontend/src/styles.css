@@ -550,8 +550,8 @@ textarea { resize: vertical; }
   }
 
   .page {
-    width: min(100%, 1180px);
-    max-width: 1180px;
+    width: min(100%, 1240px);
+    max-width: 1240px;
     margin: 0 auto;
     padding: 20px 32px 118px;
   }
@@ -566,14 +566,46 @@ textarea { resize: vertical; }
 
   .intake-page {
     display: grid;
-    grid-template-columns: minmax(320px, 0.95fr) minmax(420px, 1.05fr);
-    gap: 16px;
+    grid-template-columns: minmax(420px, 520px) minmax(460px, 1fr);
+    column-gap: 20px;
+    row-gap: 16px;
     align-items: start;
   }
 
-  .intake-page .mobile-header,
-  .intake-page .status-strip,
-  .intake-page .notice,
+  .intake-page .mobile-header {
+    grid-column: 1 / -1;
+    max-width: 980px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .intake-page .photo-card {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+  }
+
+  .intake-page .photo-preview {
+    min-height: 310px;
+  }
+
+  .intake-page .status-strip {
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: 0;
+  }
+
+  .intake-page .notice {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
+  .intake-page .form-panel {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    margin-top: 0;
+  }
+
   .intake-page .recent-panel {
     grid-column: 1 / -1;
   }
