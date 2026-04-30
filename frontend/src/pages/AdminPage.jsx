@@ -24,6 +24,28 @@ function germanError(message) {
   return map[message] || message;
 }
 
+function isBlank(value) {
+  return String(value ?? "").trim() === "";
+}
+
+function missingSettingsMessage(settings) {
+  const missing = [];
+
+  if (isBlank(settings.smtp_host)) missing.push("SMTP-Host");
+  if (!Number(settings.smtp_port) || Number(settings.smtp_port) < 1 || Number(settings.smtp_port) > 65535) {
+    missing.push("SMTP-Port");
+  }
+  if (isBlank(settings.sender_email)) missing.push("Absenderadresse");
+  if (isBlank(settings.recipient_email)) missing.push("Empfängeradresse");
+  if (!isBlank(settings.smtp_username) && isBlank(settings.smtp_password) && !settings.password_configured) {
+    missing.push("SMTP-Passwort");
+  }
+
+  if (missing.length === 0) return "";
+  if (missing.length === 1) return `${missing[0]} fehlt.`;
+  return `Folgende Pflichtfelder fehlen: ${missing.join(", ")}.`;
+}
+
 export default function AdminPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -46,6 +68,12 @@ export default function AdminPage() {
   }
 
   async function handleSave() {
+    const validationMessage = missingSettingsMessage(settings);
+    if (validationMessage) {
+      setStatus({ type: "error", message: validationMessage });
+      return;
+    }
+
     setBusy(true);
     setStatus(null);
     try {
@@ -60,6 +88,12 @@ export default function AdminPage() {
   }
 
   async function handleTest() {
+    const validationMessage = missingSettingsMessage(settings);
+    if (validationMessage) {
+      setStatus({ type: "error", message: validationMessage });
+      return;
+    }
+
     setBusy(true);
     setStatus(null);
     try {
