@@ -1,8 +1,8 @@
 # RegITs-Waren
 
-Mobile-first interne Webanwendung fuer den IT-Hardware-Wareneingang.
+Mobile-first interne Webanwendung für den IT-Hardware-Wareneingang.
 
-Mitarbeitende koennen mit dem Smartphone ein Foto des Geraeteetiketts aufnehmen. Die Anwendung scannt das Bild automatisch per OCR und Barcode-Erkennung, fuellt erkannte Felder vorab aus und sendet eine E-Mail mit Fotoanhang. Alle Eintraege werden in SQLite fuer das Audit-Protokoll gespeichert. SMTP wird im geschuetzten Admin-Bereich der Weboberflaeche konfiguriert.
+Mitarbeitende können mit dem Smartphone ein Foto des Geräteetiketts aufnehmen. Die Anwendung scannt das Bild automatisch per OCR und Barcode-Erkennung, füllt erkannte Felder vorab aus und sendet eine E-Mail mit Fotoanhang. Alle Einträge werden in SQLite für das Audit-Protokoll gespeichert. SMTP wird im geschützten Admin-Bereich der Weboberfläche konfiguriert.
 
 ## Projektstruktur
 
@@ -46,7 +46,7 @@ cp .env.example .env
 2. `.env` bearbeiten und mindestens diese Werte setzen:
 
 ```env
-APP_SECRET_KEY=dein-langer-zufaelliger-schluessel
+APP_SECRET_KEY=dein-langer-zufälliger-schlüssel
 ADMIN_PASSWORD=dein-admin-passwort
 ```
 
@@ -56,7 +56,7 @@ ADMIN_PASSWORD=dein-admin-passwort
 docker compose up --build
 ```
 
-4. Im Browser oeffnen:
+4. Im Browser öffnen:
 
 ```text
 http://localhost:8080
@@ -66,19 +66,19 @@ Hochgeladene Bilder werden im Docker-Volume unter `/app/uploads` gespeichert. Di
 
 ## Admin SMTP-Einstellungen
 
-Die Ansicht `Admin` oeffnen und das `ADMIN_PASSWORD` aus `.env` eingeben.
+Die Ansicht `Admin` öffnen und das `ADMIN_PASSWORD` aus `.env` eingeben.
 
-Im Admin-Bereich koennen diese Werte gepflegt werden:
+Im Admin-Bereich können diese Werte gepflegt werden:
 
 - SMTP-Host
 - SMTP-Port
 - SMTP-Benutzername
 - SMTP-Passwort
 - Absenderadresse
-- Empfaengeradresse
+- Empfängeradresse
 - TLS / STARTTLS
 
-Das Backend prueft die SMTP-Verbindung vor dem Speichern. Das SMTP-Passwort wird mit `APP_SECRET_KEY` verschluesselt, nie an das Frontend zurueckgegeben und nicht protokolliert.
+Das Backend prüft die SMTP-Verbindung vor dem Speichern. Das SMTP-Passwort wird mit `APP_SECRET_KEY` verschlüsselt, nie an das Frontend zurückgegeben und nicht protokolliert.
 
 ## Smartphone-Kamera
 
@@ -88,16 +88,16 @@ Die Anwendung nutzt:
 <input type="file" accept="image/*" capture="environment" />
 ```
 
-Viele mobile Browser erlauben den besten Kamerazugriff nur ueber HTTPS, ausser bei `localhost`. Fuer produktive Nutzung oder Tests im LAN sollte die Anwendung hinter einem HTTPS-Reverse-Proxy laufen.
+Viele mobile Browser erlauben den besten Kamerazugriff nur über HTTPS, außer bei `localhost`. Fuer produktive Nutzung oder Tests im LAN sollte die Anwendung hinter einem HTTPS-Reverse-Proxy laufen.
 
 ## OCR und Barcode
 
 Das Backend-Image installiert:
 
 - Tesseract OCR
-- zbar Runtime fuer `pyzbar`
+- zbar Runtime für `pyzbar`
 
-Das Backend erkennt Seriennummer, Hersteller und Modell per regelbasierter Auswertung. Wenn keine Werte erkannt werden, bleiben die Felder leer und koennen manuell bearbeitet werden.
+Das Backend erkennt Seriennummer, Hersteller und Modell per regelbasierter Auswertung. Wenn keine Werte erkannt werden, bleiben die Felder leer und können manuell bearbeitet werden.
 
 ## API
 
@@ -115,7 +115,7 @@ Admin-Endpunkte erwarten den Header `X-Admin-Password`.
 ## Sicherheit
 
 - Uploads werden auf Bilddateien begrenzt.
-- Die Upload-Groesse ist ueber `MAX_UPLOAD_MB` begrenzt, Standardwert `12`.
-- Das SMTP-Passwort wird verschluesselt gespeichert.
+- Die Upload-Größe ist über `MAX_UPLOAD_MB` begrenzt, Standardwert `12`.
+- Das SMTP-Passwort wird verschlüsselt gespeichert.
 - Admin-Einstellungen erfordern `ADMIN_PASSWORD`.
 - Fuer produktive Nutzung HTTPS verwenden.

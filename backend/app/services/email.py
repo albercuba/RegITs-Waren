@@ -93,7 +93,7 @@ def send_intake_email(metadata: IntakeMetadata, image_path: Path, created_at: st
             "",
             f"Zeitpunkt: {_german_datetime(created_at)}",
             f"Seriennummer: {metadata.serial_number}",
-            f"Geraetetyp: {metadata.asset_type}",
+            f"Gerätetyp: {metadata.asset_type}",
             f"Hersteller: {metadata.vendor}",
             f"Modell: {metadata.model}",
             f"Angenommen von: {metadata.received_by}",

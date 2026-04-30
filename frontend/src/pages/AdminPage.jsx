@@ -75,7 +75,7 @@ export default function AdminPage() {
   return (
     <div className="page admin-page">
       <header className="mobile-header">
-        <p className="eyebrow">Geschuetzter Bereich</p>
+        <p className="eyebrow">Geschützter Bereich</p>
         <h1>Admin-Einstellungen</h1>
       </header>
 

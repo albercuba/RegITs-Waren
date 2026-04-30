@@ -6,7 +6,7 @@ export default function SettingsForm({ settings, onChange, onSave, onTest, busy,
   return (
     <section className="panel form-panel">
       <div className="section-title">
-        <p className="eyebrow">Geschuetzter Adminbereich</p>
+        <p className="eyebrow">Geschützter Adminbereich</p>
         <h2>SMTP-Einstellungen</h2>
       </div>
       <div className="form-grid">
@@ -43,7 +43,7 @@ export default function SettingsForm({ settings, onChange, onSave, onTest, busy,
         <input type="email" value={settings.sender_email} onChange={(event) => setField("sender_email", event.target.value)} />
       </label>
       <label>
-        <span>Empfaengeradresse</span>
+        <span>Empfängeradresse</span>
         <input
           type="email"
           value={settings.recipient_email}

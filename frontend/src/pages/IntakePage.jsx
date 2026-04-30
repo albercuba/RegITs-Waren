@@ -27,7 +27,7 @@ function germanDate(value) {
 function germanError(message) {
   const map = {
     "Only image uploads are allowed": "Nur Bilddateien sind erlaubt",
-    "Invalid metadata": "Ungueltige Metadaten",
+    "Invalid metadata": "Ungültige Metadaten",
     "SMTP settings are not configured": "SMTP-Einstellungen sind nicht konfiguriert",
     "Request failed": "Anfrage fehlgeschlagen",
   };
@@ -35,7 +35,7 @@ function germanError(message) {
     return "Eintrag gespeichert, aber E-Mail-Versand fehlgeschlagen";
   }
   if (message?.includes("Image exceeds")) {
-    return "Das Bild ist zu gross";
+    return "Das Bild ist zu groß";
   }
   return map[message] || message;
 }
@@ -134,10 +134,10 @@ export default function IntakePage() {
       <section className="panel recent-panel">
         <div className="section-title">
           <p className="eyebrow">Audit-Protokoll</p>
-          <h2>Letzte Eintraege</h2>
+          <h2>Letzte Einträge</h2>
         </div>
         <div className="recent-list">
-          {submissions.length === 0 && <p className="empty-text">Noch keine Eintraege.</p>}
+          {submissions.length === 0 && <p className="empty-text">Noch keine Einträge.</p>}
           {submissions.map((item) => (
             <article className="submission-row" key={item.id}>
               <div>

@@ -16,7 +16,7 @@ export default function PhotoCapture({ previewUrl, onFileChange, onRetake, onSca
       <div className="photo-actions">
         <label className="button primary">
           <Camera size={20} />
-          <span>{previewUrl ? "Foto neu aufnehmen" : "Kamera oeffnen"}</span>
+          <span>{previewUrl ? "Foto neu aufnehmen" : "Kamera öffnen"}</span>
           <input accept="image/*" capture="environment" hidden onChange={onFileChange} type="file" />
         </label>
         {previewUrl && (

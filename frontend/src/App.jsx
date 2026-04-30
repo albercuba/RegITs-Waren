@@ -14,9 +14,9 @@ const navItems = [
 function Placeholder({ title }) {
   return (
     <section className="panel placeholder-panel">
-      <p className="eyebrow">Demnaechst</p>
+      <p className="eyebrow">Demnächst</p>
       <h2>{title}</h2>
-      <p>Diese Ansicht ist fuer die naechste Version reserviert. Wareneingang und Admin-Einstellungen sind im MVP bereit.</p>
+      <p>Diese Ansicht ist für die nächste Version reserviert. Wareneingang und Admin-Einstellungen sind im MVP bereit.</p>
     </section>
   );
 }

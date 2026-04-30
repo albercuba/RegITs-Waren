@@ -41,7 +41,7 @@ def _save_upload(upload: UploadFile, prefix: str) -> Path:
             if size > limit:
                 output.close()
                 target.unlink(missing_ok=True)
-                raise HTTPException(status_code=413, detail=f"Bild ueberschreitet {get_settings().max_upload_mb} MB Limit")
+                raise HTTPException(status_code=413, detail=f"Bild überschreitet {get_settings().max_upload_mb} MB Limit")
             output.write(chunk)
     return target
 
@@ -57,7 +57,7 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
     try:
         payload = IntakeMetadata(**json.loads(metadata))
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="Ungueltige Metadaten") from exc
+        raise HTTPException(status_code=400, detail="Ungültige Metadaten") from exc
 
     image_path = _save_upload(photo, "intake")
     created_at = utc_now()

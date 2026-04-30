@@ -1,4 +1,4 @@
-const assetTypes = ["Laptop", "Desktop", "Monitor", "Dockingstation", "Telefon", "Tablet", "Netzwerkgeraet", "Sonstiges"];
+const assetTypes = ["Laptop", "Desktop", "Monitor", "Dockingstation", "Telefon", "Tablet", "Netzwerkgerät", "Sonstiges"];
 
 const fields = [
   ["serial_number", "Seriennummer"],
@@ -17,9 +17,9 @@ export default function FormFields({ form, onChange }) {
         <h2>Wareneingang Details</h2>
       </div>
       <label>
-        <span>Geraetetyp</span>
+        <span>Gerätetyp</span>
         <select value={form.asset_type} onChange={(event) => setField("asset_type", event.target.value)}>
-          <option value="">Geraetetyp auswaehlen</option>
+          <option value="">Gerätetyp auswählen</option>
           {assetTypes.map((type) => (
             <option key={type} value={type}>
               {type}
@@ -39,7 +39,7 @@ export default function FormFields({ form, onChange }) {
           rows="4"
           value={form.notes}
           onChange={(event) => setField("notes", event.target.value)}
-          placeholder="Zustand, Zubehoer, Standort..."
+          placeholder="Zustand, Zubehör, Standort..."
         />
       </label>
     </section>
