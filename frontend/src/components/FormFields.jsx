@@ -1,4 +1,14 @@
-const assetTypes = ["Laptop", "Desktop", "Monitor", "Dockingstation", "Telefon", "Tablet", "Netzwerkgerät", "Sonstiges"];
+const assetTypes = [
+  "Laptop",
+  "Desktop",
+  "Monitor",
+  "Dockingstation",
+  "Telefon",
+  "Tablet",
+  "Netzwerkgerät",
+  "Tastatur/Maus-Set",
+  "Sonstiges",
+];
 
 const fields = [
   ["serial_number", "Seriennummer"],

@@ -1,7 +1,7 @@
 import re
 
 
-VENDORS = ("Dell", "HP", "HPE", "Lenovo", "Apple", "Microsoft", "Cisco", "Ubiquiti", "Samsung", "iiyama")
+VENDORS = ("Dell", "HP", "HPE", "Lenovo", "Apple", "Microsoft", "Cisco", "Ubiquiti", "Samsung", "iiyama", "Logitech")
 
 PRODUCT_BARCODES = {
     "4948570127832": {
@@ -9,6 +9,12 @@ PRODUCT_BARCODES = {
         "model": "ProLite X2491H",
         "asset_type": "Monitor",
         "notes": ("Part Code: X2491H-B1", "BLACK"),
+    },
+    "5099206092372": {
+        "vendor": "Logitech",
+        "model": "MK295",
+        "asset_type": "Tastatur/Maus-Set",
+        "notes": ("Part Code: 920-009794",),
     },
 }
 
@@ -19,11 +25,13 @@ SERIAL_PATTERNS = (
 MODEL_PATTERNS = (
     r"(?:Model|Product)\s*[:#-]?\s*([A-Z0-9][A-Z0-9 ._/-]{2,40})",
     r"\b(ProLite\s+[A-Z0-9-]{4,})\b",
+    r"\b(MK\d{3,4})\b",
     r"(?:Part Code|Part No\.?|P/N)\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{2,40})",
 )
 
 PART_CODE_PATTERNS = (
     r"(?:Part Code|Part No\.?|P/N)\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{2,40})",
+    r"\b(920-\d{6})\b",
 )
 
 
@@ -44,6 +52,8 @@ def _detect_asset_type(text: str) -> str:
         return "Monitor"
     if re.search(r"\biiyama\b", text, re.IGNORECASE) and re.search(r"\bX\d{4}[A-Z-]*\b", text, re.IGNORECASE):
         return "Monitor"
+    if re.search(r"\bMK\d{3,4}\b", text, re.IGNORECASE) or _contains_any(text, ("keyboard", "mouse", "tastatur", "maus")):
+        return "Tastatur/Maus-Set"
     return ""
 
 
@@ -80,6 +90,22 @@ def _known_product(text: str, barcodes: list[str]) -> dict[str, str | tuple[str,
     return {}
 
 
+def _known_product_barcodes() -> set[str]:
+    return set(PRODUCT_BARCODES)
+
+
+def _serial_from_barcodes(barcodes: list[str]) -> str:
+    known_products = _known_product_barcodes()
+    for barcode in barcodes:
+        clean = barcode.strip()
+        digits = re.sub(r"\D", "", clean)
+        if digits in known_products:
+            continue
+        if clean and not (clean.isdigit() and 8 <= len(clean) <= 14):
+            return clean
+    return ""
+
+
 def _merge_notes(*groups: str | tuple[str, ...]) -> str:
     notes = []
     for group in groups:
@@ -101,7 +127,7 @@ def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, 
 
     serial = _first_match(SERIAL_PATTERNS, clean_text)
     if not serial and barcodes:
-        serial = barcodes[0]
+        serial = _serial_from_barcodes(barcodes)
 
     return {
         "serial_number": serial,

@@ -1,10 +1,36 @@
 from pathlib import Path
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageEnhance, ImageOps
 from pyzbar.pyzbar import decode
 import pytesseract
 
 from app.services.parser import parse_label_data
+
+
+def _merge_text(parts: list[str]) -> str:
+    lines = []
+    seen = set()
+    for part in parts:
+        for line in part.splitlines():
+            clean = line.strip()
+            if clean and clean not in seen:
+                lines.append(clean)
+                seen.add(clean)
+    return "\n".join(lines)
+
+
+def _ocr_text(image: Image.Image) -> str:
+    grayscale = ImageOps.grayscale(image)
+    enhanced = ImageEnhance.Contrast(ImageOps.autocontrast(grayscale)).enhance(1.8)
+    upscaled = enhanced.resize((enhanced.width * 2, enhanced.height * 2))
+    variants = (grayscale, enhanced, upscaled)
+    configs = ("--psm 6", "--psm 11")
+
+    parts = []
+    for variant in variants:
+        for config in configs:
+            parts.append(pytesseract.image_to_string(variant, config=config))
+    return _merge_text(parts)
 
 
 def scan_image(path: Path) -> dict:
@@ -14,8 +40,7 @@ def scan_image(path: Path) -> dict:
 
     try:
         image = ImageOps.exif_transpose(Image.open(path))
-        grayscale = ImageOps.grayscale(image)
-        raw_text = pytesseract.image_to_string(grayscale)
+        raw_text = _ocr_text(image)
         barcodes = [item.data.decode("utf-8", errors="ignore") for item in decode(image)]
     except Exception as exc:  # OCR tooling can fail if binaries are missing.
         ocr_error = str(exc)
