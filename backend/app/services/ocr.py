@@ -22,15 +22,13 @@ def _merge_text(parts: list[str]) -> str:
 def _ocr_text(image: Image.Image) -> str:
     grayscale = ImageOps.grayscale(image)
     enhanced = ImageEnhance.Contrast(ImageOps.autocontrast(grayscale)).enhance(1.8)
-    upscaled = enhanced.resize((enhanced.width * 2, enhanced.height * 2))
-    variants = (grayscale, enhanced, upscaled)
-    configs = ("--psm 6", "--psm 11")
+    fast_text = pytesseract.image_to_string(enhanced, config="--psm 6")
+    if len(fast_text.strip()) >= 20:
+        return fast_text
 
-    parts = []
-    for variant in variants:
-        for config in configs:
-            parts.append(pytesseract.image_to_string(variant, config=config))
-    return _merge_text(parts)
+    upscaled = enhanced.resize((enhanced.width * 2, enhanced.height * 2))
+    fallback_text = pytesseract.image_to_string(upscaled, config="--psm 11")
+    return _merge_text([fast_text, fallback_text])
 
 
 def scan_image(path: Path) -> dict:
