@@ -4,7 +4,7 @@ from PIL import Image, ImageEnhance, ImageOps
 from pyzbar.pyzbar import decode
 import pytesseract
 
-from app.services.parser import parse_label_data
+from app.services.parser import parse_label_data_with_debug
 
 
 def _merge_text(parts: list[str]) -> str:
@@ -47,12 +47,12 @@ def scan_image(path: Path) -> dict:
     except Exception as exc:  # OCR tooling can fail if binaries are missing.
         ocr_error = str(exc)
 
-    fields = parse_label_data(raw_text, barcodes)
-    if not fields.get("serial_number") and raw_text and not ocr_error:
+    fields, serial_debug = parse_label_data_with_debug(raw_text, barcodes)
+    if serial_debug.get("needs_confirmation") and raw_text and not ocr_error:
         try:
             fallback_text = _ocr_fallback_text(image)
             raw_text = _merge_text([raw_text, fallback_text])
-            fields = parse_label_data(raw_text, barcodes)
+            fields, serial_debug = parse_label_data_with_debug(raw_text, barcodes)
         except Exception as exc:  # Keep the fast OCR result if fallback fails.
             ocr_error = str(exc)
 
@@ -62,5 +62,9 @@ def scan_image(path: Path) -> dict:
         "fields": fields,
         "raw_text": raw_text,
         "barcodes": barcodes,
+        "serial_debug": serial_debug,
+        "best_guess_serial": serial_debug.get("best_guess_serial", ""),
+        "confidence_score": serial_debug.get("confidence_score", 0),
+        "serial_candidates": serial_debug.get("candidates", []),
         "ocr_error": ocr_error,
     }

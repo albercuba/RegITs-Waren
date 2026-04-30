@@ -2,11 +2,11 @@ import json
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
 from app.config import get_settings
-from app.database import get_db
+from app.database import get_db, utc_timestamp
 from app.models.schemas import IntakeMetadata
 from app.services.email import send_intake_email, utc_now
 from app.services.ocr import scan_image
@@ -46,10 +46,57 @@ def _save_upload(upload: UploadFile, prefix: str) -> Path:
     return target
 
 
+def _store_scan_debug(path: Path, result: dict) -> int:
+    with get_db() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO scan_debug (
+                created_at, image_path, raw_text, normalized_text, barcodes, candidates,
+                best_guess_serial, confidence_score, fields
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                utc_timestamp(),
+                str(path),
+                result.get("raw_text", ""),
+                result.get("serial_debug", {}).get("normalized_text", ""),
+                json.dumps(result.get("barcodes", []), ensure_ascii=False),
+                json.dumps(result.get("serial_candidates", []), ensure_ascii=False),
+                result.get("best_guess_serial", ""),
+                result.get("confidence_score", 0),
+                json.dumps(result.get("fields", {}), ensure_ascii=False),
+            ),
+        )
+        return cursor.lastrowid
+
+
 @router.post("/scan")
 def scan_label(photo: UploadFile = File(...)) -> dict:
     path = _save_upload(photo, "scan")
-    return scan_image(path)
+    result = scan_image(path)
+    result["debug_id"] = _store_scan_debug(path, result)
+    return result
+
+
+@router.post("/scan/debug")
+def scan_label_debug(photo: UploadFile = File(...)) -> dict:
+    path = _save_upload(photo, "scan-debug")
+    result = scan_image(path)
+    result["debug_id"] = _store_scan_debug(path, result)
+    return result
+
+
+@router.get("/scan/debug/{debug_id}")
+def get_scan_debug(debug_id: int) -> dict:
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM scan_debug WHERE id = ?", (debug_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Debug-Daten nicht gefunden")
+    data = dict(row)
+    for key in ("barcodes", "candidates", "fields"):
+        data[key] = json.loads(data[key] or "[]" if key != "fields" else data[key] or "{}")
+    return data
 
 
 @router.post("/submissions")
@@ -65,9 +112,10 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
         cursor = conn.execute(
             """
             INSERT INTO submissions (
-                created_at, serial_number, asset_type, vendor, model, received_by, notes, image_path, raw_text
+                created_at, serial_number, asset_type, vendor, model, received_by, notes, image_path,
+                raw_text, detected_candidates, user_corrected_serial
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 created_at,
@@ -79,6 +127,8 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
                 payload.notes,
                 str(image_path),
                 payload.raw_text,
+                payload.detected_candidates,
+                payload.serial_number,
             ),
         )
         submission_id = cursor.lastrowid
@@ -92,8 +142,7 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
 
 
 @router.get("/submissions")
-def list_submissions(limit: int = 20) -> list[dict]:
-    limit = min(max(limit, 1), 100)
+def list_submissions(limit: int = Query(default=20, ge=1, le=100)) -> list[dict]:
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM submissions ORDER BY created_at DESC LIMIT ?",

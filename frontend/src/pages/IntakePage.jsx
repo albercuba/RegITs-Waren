@@ -12,6 +12,7 @@ const emptyForm = {
   received_by: "",
   notes: "",
   raw_text: "",
+  detected_candidates: "",
 };
 
 function germanError(message) {
@@ -47,8 +48,19 @@ export default function IntakePage() {
     setMessage(null);
     try {
       const result = await scanPhoto(file);
-      setForm((current) => ({ ...current, ...result.fields, raw_text: result.raw_text || "" }));
-      setOcrStatus(result.status === "fields_detected" ? "Felder erkannt" : "Manuelle Eingabe erforderlich");
+      setForm((current) => ({
+        ...current,
+        ...result.fields,
+        raw_text: result.raw_text || "",
+        detected_candidates: JSON.stringify(result.serial_candidates || []),
+      }));
+      setOcrStatus(
+        result.serial_debug?.needs_confirmation
+          ? "Seriennummer bitte prüfen"
+          : result.status === "fields_detected"
+            ? "Felder erkannt"
+            : "Manuelle Eingabe erforderlich"
+      );
     } catch (error) {
       setOcrStatus("Manuelle Eingabe erforderlich");
       setMessage({ type: "error", text: germanError(error.message) });

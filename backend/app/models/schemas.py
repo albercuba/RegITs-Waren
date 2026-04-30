@@ -9,6 +9,7 @@ class IntakeMetadata(BaseModel):
     received_by: str = ""
     notes: str = ""
     raw_text: str = ""
+    detected_candidates: str = ""
 
 
 class EmailSettingsIn(BaseModel):

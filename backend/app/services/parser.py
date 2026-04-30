@@ -1,5 +1,7 @@
 import re
 
+from app.services.serial_extractor import extract_serial
+
 
 VENDORS = ("Dell", "HP", "HPE", "Lenovo", "Apple", "Microsoft", "Cisco", "Ubiquiti", "Samsung", "iiyama", "Logitech")
 
@@ -18,12 +20,6 @@ PRODUCT_BARCODES = {
     },
 }
 
-
-SERIAL_PATTERNS = (
-    r"(?<![A-Z0-9])S\s*/\s*N\s*[:#-]?\s*([A-Z0-9-]{5,})",
-    r"(?<![A-Z0-9])SN\s*[:#-]\s*([A-Z0-9-]{5,})",
-    r"(?<![A-Z0-9])(?:Serial(?: Number)?|Service Tag)\s*[:#-]?\s*([A-Z0-9-]{5,})",
-)
 MODEL_PATTERNS = (
     r"(?:Model|Product)\s*[:#-]?\s*([A-Z0-9][A-Z0-9 ._/-]{2,40})",
     r"\b(ProLite\s+[A-Z0-9-]{4,})\b",
@@ -128,6 +124,11 @@ def _merge_notes(*groups: str | tuple[str, ...]) -> str:
 
 
 def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, str]:
+    fields, _serial_debug = parse_label_data_with_debug(text, barcodes)
+    return fields
+
+
+def parse_label_data_with_debug(text: str, barcodes: list[str] | None = None) -> tuple[dict[str, str], dict]:
     clean_text = " ".join(text.split())
     barcodes = barcodes or []
     product = _known_product_from_text(clean_text) or _known_product_from_barcode(clean_text, barcodes)
@@ -136,12 +137,13 @@ def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, 
     asset_type = _detect_asset_type(clean_text)
     notes = _build_notes(clean_text)
 
-    serial = _first_match(SERIAL_PATTERNS, clean_text)
+    resolved_vendor = vendor or str(product.get("vendor", ""))
+    serial_debug = extract_serial(text, barcodes, resolved_vendor)
 
     return {
-        "serial_number": serial,
-        "vendor": vendor or str(product.get("vendor", "")),
+        "serial_number": serial_debug["best_guess_serial"],
+        "vendor": resolved_vendor,
         "model": str(product.get("model", "")) or model,
         "asset_type": asset_type or str(product.get("asset_type", "")),
         "notes": _merge_notes(notes, product.get("notes", ())),
-    }
+    }, serial_debug

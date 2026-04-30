@@ -1,0 +1,56 @@
+{
+  "confidence_threshold": 70,
+  "keywords": [
+    "S/N",
+    "SN",
+    "SERIAL",
+    "SERIAL NO",
+    "SERIAL NUMBER",
+    "SERVICE TAG"
+  ],
+  "candidate_patterns": [
+    {
+      "name": "keyword_serial",
+      "regex": "(?:S\\s*/\\s*N|SN|SERIAL(?:\\s+NO|\\s+NUMBER)?|SERVICE\\s+TAG)\\s*[:#-]?\\s*([A-Z0-9-]{5,24})",
+      "base_score": 45
+    },
+    {
+      "name": "mixed_alphanumeric",
+      "regex": "\\b([A-Z0-9-]{6,20})\\b",
+      "base_score": 12
+    },
+    {
+      "name": "letters_then_digits",
+      "regex": "\\b([A-Z]{2,5}[0-9]{4,}[A-Z0-9-]*)\\b",
+      "base_score": 18
+    }
+  ],
+  "vendor_rules": {
+    "Dell": [
+      {
+        "name": "dell_service_tag",
+        "regex": "(?:SERVICE\\s+TAG|ST)\\s*[:#-]?\\s*([A-Z0-9]{5,7})",
+        "base_score": 55
+      }
+    ],
+    "HP": [
+      {
+        "name": "hp_serial",
+        "regex": "(?:S\\s*/\\s*N|SN|SERIAL(?:\\s+NO|\\s+NUMBER)?)\\s*[:#-]?\\s*([A-Z0-9]{6,20})",
+        "base_score": 55
+      }
+    ],
+    "Lenovo": [
+      {
+        "name": "lenovo_serial",
+        "regex": "(?:S\\s*/\\s*N|SN|SERIAL)\\s*[:#-]?\\s*([A-Z0-9]{6,20})",
+        "base_score": 50
+      },
+      {
+        "name": "lenovo_mtm_serial",
+        "regex": "(?:MTM|TYPE)\\s*[:#-]?\\s*([A-Z0-9-]{4,})\\s+(?:S\\s*/\\s*N|SN|SERIAL)\\s*[:#-]?\\s*([A-Z0-9]{6,20})",
+        "base_score": 55
+      }
+    ]
+  }
+}
