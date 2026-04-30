@@ -20,18 +20,24 @@ PRODUCT_BARCODES = {
 
 
 SERIAL_PATTERNS = (
-    r"(?:S/N|SN|Serial(?: Number)?|Service Tag)\s*[:#-]?\s*([A-Z0-9-]{5,})",
+    r"(?<![A-Z0-9])(?:S/N|SN|Serial(?: Number)?|Service Tag)\s*[:#-]?\s*([A-Z0-9-]{5,})",
 )
 MODEL_PATTERNS = (
     r"(?:Model|Product)\s*[:#-]?\s*([A-Z0-9][A-Z0-9 ._/-]{2,40})",
     r"\b(ProLite\s+[A-Z0-9-]{4,})\b",
     r"\b(MK\d{3,4})\b",
+    r"\b(HSN-[A-Z0-9-]{3,})\b",
     r"(?:Part Code|Part No\.?|P/N)\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{2,40})",
 )
 
 PART_CODE_PATTERNS = (
     r"(?:Part Code|Part No\.?|P/N)\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{2,40})",
     r"\b(920-\d{6})\b",
+    r"\b(N\d{5,}-\d{3})\b",
+)
+
+MAC_PATTERNS = (
+    r"\bMAC\s*[:#-]?\s*([0-9A-F]{2}(?::[0-9A-F]{2}){5})\b",
 )
 
 
@@ -54,16 +60,21 @@ def _detect_asset_type(text: str) -> str:
         return "Monitor"
     if re.search(r"\bMK\d{3,4}\b", text, re.IGNORECASE) or _contains_any(text, ("keyboard", "mouse", "tastatur", "maus")):
         return "Tastatur/Maus-Set"
+    if re.search(r"\bHSN-[A-Z0-9-]{3,}\b", text, re.IGNORECASE) or _contains_any(text, ("dock", "docking", "port replicator")):
+        return "Dockingstation"
     return ""
 
 
 def _build_notes(text: str) -> str:
     notes = []
     part_code = _first_match(PART_CODE_PATTERNS, text)
+    mac_address = _first_match(MAC_PATTERNS, text)
     size = _first_match((r"\b(\d{2}(?:[.,]\d)?)\s*(?:\"|inch|in|\b(?=IPS|Full\s*HD))",), text)
 
     if part_code:
         notes.append(f"Part Code: {part_code}")
+    if mac_address:
+        notes.append(f"MAC: {mac_address}")
     if size:
         notes.append(f"{size.replace(' ', '')} inch")
     if re.search(r"\bblack\b", text, re.IGNORECASE):
@@ -80,7 +91,21 @@ def _build_notes(text: str) -> str:
     return ", ".join(dict.fromkeys(notes))
 
 
-def _known_product(text: str, barcodes: list[str]) -> dict[str, str | tuple[str, ...]]:
+def _known_product_from_text(text: str) -> dict[str, str | tuple[str, ...]]:
+    if re.search(r"\b(?:HSN-IX02|N59407-001)\b", text, re.IGNORECASE):
+        return {
+            "vendor": "HP",
+            "model": "HP USB-C Dock G5",
+            "asset_type": "Dockingstation",
+            "notes": ("Regulatory Model: HSN-IX02",),
+        }
+    return {}
+
+
+def _known_product_from_barcode(text: str, barcodes: list[str]) -> dict[str, str | tuple[str, ...]]:
+    if re.search(r"\b(?:HSN-[A-Z0-9-]{3,}|N\d{5,}-\d{3})\b", text, re.IGNORECASE):
+        return {}
+
     haystack = [re.sub(r"\D", "", value) for value in barcodes]
     haystack.append(re.sub(r"\D", "", text))
 
@@ -119,7 +144,7 @@ def _merge_notes(*groups: str | tuple[str, ...]) -> str:
 def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, str]:
     clean_text = " ".join(text.split())
     barcodes = barcodes or []
-    product = _known_product(clean_text, barcodes)
+    product = _known_product_from_text(clean_text) or _known_product_from_barcode(clean_text, barcodes)
     vendor = next((vendor for vendor in VENDORS if re.search(rf"\b{re.escape(vendor)}\b", clean_text, re.I)), "")
     model = _first_match(MODEL_PATTERNS, clean_text)
     asset_type = _detect_asset_type(clean_text)
@@ -132,7 +157,7 @@ def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, 
     return {
         "serial_number": serial,
         "vendor": vendor or str(product.get("vendor", "")),
-        "model": model or str(product.get("model", "")),
+        "model": str(product.get("model", "")) or model,
         "asset_type": asset_type or str(product.get("asset_type", "")),
         "notes": _merge_notes(notes, product.get("notes", ())),
     }
