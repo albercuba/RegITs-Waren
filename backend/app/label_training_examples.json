@@ -1,0 +1,39 @@
+[
+  {
+    "name": "hp_usb_c_dock_g5",
+    "raw_text": "HP USB-C Dock G5\nQTY: 1x\nP/N N59407-001\nS/N 1H9523ZM9L\nMAC: 98:A4:4E:88:72:C9\nR-R-hpk-HSN-IX02",
+    "barcodes": [],
+    "expected": {
+      "serial_number": "1H9523ZM9L",
+      "vendor": "HP",
+      "model": "HP USB-C Dock G5",
+      "asset_type": "Dockingstation"
+    }
+  },
+  {
+    "name": "logitech_mk295",
+    "raw_text": "S/N:2601TVZ1C6D9\nMK295\n920-009794",
+    "barcodes": [
+      "5099206092372"
+    ],
+    "expected": {
+      "serial_number": "2601TVZ1C6D9",
+      "vendor": "Logitech",
+      "model": "MK295",
+      "asset_type": "Tastatur/Maus-Set"
+    }
+  },
+  {
+    "name": "iiyama_prolite_x2491h",
+    "raw_text": "ProLite X2491H\niiyama\nS/N: 1278360205091\nPart Code\nX2491H-B1\nAccessories\nHDMI & Power cables\n23.8 IPS 120 Hz Full HD HDMI Display Port\nBLACK\nLCD monitor Model No. PL2491HA",
+    "barcodes": [
+      "4948570127832"
+    ],
+    "expected": {
+      "serial_number": "1278360205091",
+      "vendor": "iiyama",
+      "model": "ProLite X2491H",
+      "asset_type": "Monitor"
+    }
+  }
+]

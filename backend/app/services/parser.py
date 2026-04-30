@@ -90,12 +90,26 @@ def _build_notes(text: str) -> str:
 
 
 def _known_product_from_text(text: str) -> dict[str, str | tuple[str, ...]]:
-    if re.search(r"\b(?:HSN-IX02|N59407-001)\b", text, re.IGNORECASE):
+    if re.search(r"\b(?:HP\s+USB-C\s+DOCK\s+G5|HSN-IX02|N59407-001)\b", text, re.IGNORECASE):
         return {
             "vendor": "HP",
             "model": "HP USB-C Dock G5",
             "asset_type": "Dockingstation",
             "notes": ("Regulatory Model: HSN-IX02",),
+        }
+    if re.search(r"\b(?:MK295|920-009794)\b", text, re.IGNORECASE):
+        return {
+            "vendor": "Logitech",
+            "model": "MK295",
+            "asset_type": "Tastatur/Maus-Set",
+            "notes": ("Part Code: 920-009794",),
+        }
+    if re.search(r"\b(?:PROLITE\s+X2491H|X2491H-B1|PL2491HA)\b", text, re.IGNORECASE):
+        return {
+            "vendor": "iiyama",
+            "model": "ProLite X2491H",
+            "asset_type": "Monitor",
+            "notes": ("Part Code: X2491H-B1", "BLACK"),
         }
     return {}
 
