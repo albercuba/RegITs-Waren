@@ -1,10 +1,10 @@
 # RegITs-Waren
 
-Mobile-first internal web application for IT hardware intake.
+Mobile-first interne Webanwendung fuer den IT-Hardware-Wareneingang.
 
-Employees can take a label photo with a phone, automatically scan it with OCR/barcode detection, edit the detected metadata, and send an email with the photo attached. Submissions are stored in SQLite for auditing. SMTP settings are configured from the protected Admin page.
+Mitarbeitende koennen mit dem Smartphone ein Foto des Geraeteetiketts aufnehmen. Die Anwendung scannt das Bild automatisch per OCR und Barcode-Erkennung, fuellt erkannte Felder vorab aus und sendet eine E-Mail mit Fotoanhang. Alle Eintraege werden in SQLite fuer das Audit-Protokoll gespeichert. SMTP wird im geschuetzten Admin-Bereich der Weboberflaeche konfiguriert.
 
-## Project Structure
+## Projektstruktur
 
 ```text
 backend/
@@ -35,73 +35,73 @@ docker-compose.yml
 .env.example
 ```
 
-## Run With Docker
+## Start mit Docker
 
-1. Create your environment file:
+1. Umgebungsdatei erstellen:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Edit `.env` and set at least:
+2. `.env` bearbeiten und mindestens diese Werte setzen:
 
 ```env
-APP_SECRET_KEY=your-long-random-secret
-ADMIN_PASSWORD=your-admin-password
+APP_SECRET_KEY=dein-langer-zufaelliger-schluessel
+ADMIN_PASSWORD=dein-admin-passwort
 ```
 
-3. Start the app:
+3. Anwendung starten:
 
 ```bash
 docker compose up --build
 ```
 
-4. Open:
+4. Im Browser oeffnen:
 
 ```text
 http://localhost:8080
 ```
 
-Uploaded images are stored in the Docker volume mounted at `/app/uploads`. SQLite data is stored in the `data` Docker volume.
+Hochgeladene Bilder werden im Docker-Volume unter `/app/uploads` gespeichert. Die SQLite-Datenbank liegt im `data` Docker-Volume.
 
-## Admin SMTP Settings
+## Admin SMTP-Einstellungen
 
-Open the `Admin` view and enter `ADMIN_PASSWORD` from `.env`.
+Die Ansicht `Admin` oeffnen und das `ADMIN_PASSWORD` aus `.env` eingeben.
 
-The Admin page lets you configure:
+Im Admin-Bereich koennen diese Werte gepflegt werden:
 
-- SMTP host
-- SMTP port
-- SMTP username
-- SMTP password
-- Sender email
-- Recipient email
+- SMTP-Host
+- SMTP-Port
+- SMTP-Benutzername
+- SMTP-Passwort
+- Absenderadresse
+- Empfaengeradresse
 - TLS / STARTTLS
 
-The backend validates the SMTP connection before saving. The SMTP password is encrypted using `APP_SECRET_KEY`, is never returned to the frontend, and should not appear in logs.
+Das Backend prueft die SMTP-Verbindung vor dem Speichern. Das SMTP-Passwort wird mit `APP_SECRET_KEY` verschluesselt, nie an das Frontend zurueckgegeben und nicht protokolliert.
 
-## Phone Camera Notes
+## Smartphone-Kamera
 
-The app uses:
+Die Anwendung nutzt:
 
 ```html
 <input type="file" accept="image/*" capture="environment" />
 ```
 
-Most mobile browsers require HTTPS for the best camera behavior outside `localhost`. For production or LAN phone testing, place the app behind an HTTPS reverse proxy.
+Viele mobile Browser erlauben den besten Kamerazugriff nur ueber HTTPS, ausser bei `localhost`. Fuer produktive Nutzung oder Tests im LAN sollte die Anwendung hinter einem HTTPS-Reverse-Proxy laufen.
 
-## OCR And Barcode
+## OCR und Barcode
 
-The Docker backend image installs:
+Das Backend-Image installiert:
 
 - Tesseract OCR
-- zbar runtime for `pyzbar`
+- zbar Runtime fuer `pyzbar`
 
-The backend extracts serial number, vendor, and model values with regex-based parsing. If detection fails, fields remain editable and empty.
+Das Backend erkennt Seriennummer, Hersteller und Modell per regelbasierter Auswertung. Wenn keine Werte erkannt werden, bleiben die Felder leer und koennen manuell bearbeitet werden.
 
 ## API
 
-Main endpoints:
+Wichtige Endpunkte:
 
 - `POST /api/scan`
 - `POST /api/submissions`
@@ -110,13 +110,12 @@ Main endpoints:
 - `POST /api/admin/email-settings`
 - `POST /api/admin/email-settings/test`
 
-Admin endpoints require the `X-Admin-Password` header.
+Admin-Endpunkte erwarten den Header `X-Admin-Password`.
 
-## Security Notes
+## Sicherheit
 
-- Image upload content type is validated.
-- Upload size is limited with `MAX_UPLOAD_MB`, default `12`.
-- SMTP password is encrypted at rest.
-- Admin settings require `ADMIN_PASSWORD`.
-- Use HTTPS for production.
-
+- Uploads werden auf Bilddateien begrenzt.
+- Die Upload-Groesse ist ueber `MAX_UPLOAD_MB` begrenzt, Standardwert `12`.
+- Das SMTP-Passwort wird verschluesselt gespeichert.
+- Admin-Einstellungen erfordern `ADMIN_PASSWORD`.
+- Fuer produktive Nutzung HTTPS verwenden.

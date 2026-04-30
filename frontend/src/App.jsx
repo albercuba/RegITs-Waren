@@ -1,22 +1,22 @@
-import { ClipboardList, Inbox, Mail, Settings, ShieldCheck } from "lucide-react";
+import { ClipboardList, Inbox, Mail, Settings, ShieldCheck, Sun } from "lucide-react";
 import { useState } from "react";
 import AdminPage from "./pages/AdminPage.jsx";
 import IntakePage from "./pages/IntakePage.jsx";
 
 const navItems = [
-  { id: "receiving", label: "Receiving", icon: Inbox },
-  { id: "inventory", label: "Inventory", icon: ClipboardList },
-  { id: "queue", label: "Email Queue", icon: Mail },
-  { id: "audit", label: "Audit Log", icon: ShieldCheck },
+  { id: "receiving", label: "Wareneingang", icon: Inbox },
+  { id: "inventory", label: "Inventar", icon: ClipboardList },
+  { id: "queue", label: "E-Mail-Warteschlange", icon: Mail },
+  { id: "audit", label: "Audit-Protokoll", icon: ShieldCheck },
   { id: "admin", label: "Admin", icon: Settings },
 ];
 
 function Placeholder({ title }) {
   return (
     <section className="panel placeholder-panel">
-      <p className="eyebrow">Coming next</p>
+      <p className="eyebrow">Demnaechst</p>
       <h2>{title}</h2>
-      <p>This view is reserved for the next iteration. Receiving and Admin Settings are ready for the MVP.</p>
+      <p>Diese Ansicht ist fuer die naechste Version reserviert. Wareneingang und Admin-Einstellungen sind im MVP bereit.</p>
     </section>
   );
 }
@@ -26,12 +26,23 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <header className="topbar">
+        <div className="topbar-logo">REGITS-WAREN</div>
+        <div className="topbar-title">IT-Hardware Wareneingang</div>
+        <div className="topbar-right">
+          <span className="topbar-count">MVP</span>
+          <span className="theme-pill">
+            <Sun size={14} />
+          </span>
+        </div>
+      </header>
+
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">RW</span>
           <div>
             <strong>RegITs-Waren</strong>
-            <small>Hardware intake</small>
+            <small>Hardware Wareneingang</small>
           </div>
         </div>
         <nav>
@@ -55,9 +66,9 @@ export default function App() {
       <main className="content">
         {activeView === "receiving" && <IntakePage />}
         {activeView === "admin" && <AdminPage />}
-        {activeView === "inventory" && <Placeholder title="Inventory" />}
-        {activeView === "queue" && <Placeholder title="Email Queue" />}
-        {activeView === "audit" && <Placeholder title="Audit Log" />}
+        {activeView === "inventory" && <Placeholder title="Inventar" />}
+        {activeView === "queue" && <Placeholder title="E-Mail-Warteschlange" />}
+        {activeView === "audit" && <Placeholder title="Audit-Protokoll" />}
       </main>
     </div>
   );

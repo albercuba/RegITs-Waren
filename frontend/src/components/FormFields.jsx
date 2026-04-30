@@ -1,10 +1,10 @@
-const assetTypes = ["Laptop", "Desktop", "Monitor", "Dock", "Phone", "Tablet", "Network", "Other"];
+const assetTypes = ["Laptop", "Desktop", "Monitor", "Dockingstation", "Telefon", "Tablet", "Netzwerkgeraet", "Sonstiges"];
 
 const fields = [
-  ["serial_number", "Serial number"],
-  ["vendor", "Vendor"],
-  ["model", "Model"],
-  ["received_by", "Received by"],
+  ["serial_number", "Seriennummer"],
+  ["vendor", "Hersteller"],
+  ["model", "Modell"],
+  ["received_by", "Angenommen von"],
 ];
 
 export default function FormFields({ form, onChange }) {
@@ -13,13 +13,13 @@ export default function FormFields({ form, onChange }) {
   return (
     <section className="panel form-panel">
       <div className="section-title">
-        <p className="eyebrow">Auto-filled fields</p>
-        <h2>Intake Details</h2>
+        <p className="eyebrow">Automatisch erkannte Felder</p>
+        <h2>Wareneingang Details</h2>
       </div>
       <label>
-        <span>Asset type</span>
+        <span>Geraetetyp</span>
         <select value={form.asset_type} onChange={(event) => setField("asset_type", event.target.value)}>
-          <option value="">Choose asset type</option>
+          <option value="">Geraetetyp auswaehlen</option>
           {assetTypes.map((type) => (
             <option key={type} value={type}>
               {type}
@@ -34,12 +34,12 @@ export default function FormFields({ form, onChange }) {
         </label>
       ))}
       <label>
-        <span>Notes</span>
+        <span>Notizen</span>
         <textarea
           rows="4"
           value={form.notes}
           onChange={(event) => setField("notes", event.target.value)}
-          placeholder="Condition, accessories, location..."
+          placeholder="Zustand, Zubehoer, Standort..."
         />
       </label>
     </section>

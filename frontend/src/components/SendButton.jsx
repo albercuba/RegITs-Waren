@@ -5,7 +5,7 @@ export default function SendButton({ disabled, sending, onClick }) {
     <div className="sticky-send">
       <button className="send-button" disabled={disabled || sending} onClick={onClick} type="button">
         <Send size={22} />
-        <span>{sending ? "Sending..." : "Send Email"}</span>
+        <span>{sending ? "Sende..." : "E-Mail senden"}</span>
       </button>
     </div>
   );

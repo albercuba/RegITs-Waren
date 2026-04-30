@@ -14,11 +14,37 @@ const emptyForm = {
   raw_text: "",
 };
 
+function germanDate(value) {
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function germanError(message) {
+  const map = {
+    "Only image uploads are allowed": "Nur Bilddateien sind erlaubt",
+    "Invalid metadata": "Ungueltige Metadaten",
+    "SMTP settings are not configured": "SMTP-Einstellungen sind nicht konfiguriert",
+    "Request failed": "Anfrage fehlgeschlagen",
+  };
+  if (message?.startsWith("Submission saved, but email failed")) {
+    return "Eintrag gespeichert, aber E-Mail-Versand fehlgeschlagen";
+  }
+  if (message?.includes("Image exceeds")) {
+    return "Das Bild ist zu gross";
+  }
+  return map[message] || message;
+}
+
 export default function IntakePage() {
   const [photo, setPhoto] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [form, setForm] = useState(emptyForm);
-  const [ocrStatus, setOcrStatus] = useState("Manual input required");
+  const [ocrStatus, setOcrStatus] = useState("Manuelle Eingabe erforderlich");
   const [message, setMessage] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [sending, setSending] = useState(false);
@@ -32,15 +58,15 @@ export default function IntakePage() {
 
   async function scanSelectedPhoto(file) {
     setScanning(true);
-    setOcrStatus("Scanning label...");
+    setOcrStatus("Etikett wird gescannt...");
     setMessage(null);
     try {
       const result = await scanPhoto(file);
       setForm((current) => ({ ...current, ...result.fields, raw_text: result.raw_text || "" }));
-      setOcrStatus(result.status === "fields_detected" ? "Fields detected" : "Manual input required");
+      setOcrStatus(result.status === "fields_detected" ? "Felder erkannt" : "Manuelle Eingabe erforderlich");
     } catch (error) {
-      setOcrStatus("Manual input required");
-      setMessage({ type: "error", text: error.message });
+      setOcrStatus("Manuelle Eingabe erforderlich");
+      setMessage({ type: "error", text: germanError(error.message) });
     } finally {
       setScanning(false);
     }
@@ -57,7 +83,7 @@ export default function IntakePage() {
   function resetPhoto() {
     setPhoto(null);
     setPreviewUrl("");
-    setOcrStatus("Manual input required");
+    setOcrStatus("Manuelle Eingabe erforderlich");
   }
 
   async function handleScan() {
@@ -71,12 +97,12 @@ export default function IntakePage() {
     setMessage(null);
     try {
       const result = await createSubmission(form, photo);
-      setMessage({ type: "success", text: `Submission #${result.id} sent` });
+      setMessage({ type: "success", text: `Eintrag #${result.id} gesendet` });
       setForm(emptyForm);
       resetPhoto();
       setSubmissions(await getSubmissions());
     } catch (error) {
-      setMessage({ type: "error", text: error.message });
+      setMessage({ type: "error", text: germanError(error.message) });
     } finally {
       setSending(false);
     }
@@ -86,7 +112,7 @@ export default function IntakePage() {
     <div className="page intake-page">
       <header className="mobile-header">
         <p className="eyebrow">RegITs-Waren</p>
-        <h1>Hardware Intake</h1>
+        <h1>Wareneingang</h1>
       </header>
 
       <PhotoCapture
@@ -107,18 +133,18 @@ export default function IntakePage() {
 
       <section className="panel recent-panel">
         <div className="section-title">
-          <p className="eyebrow">Audit log</p>
-          <h2>Recent Submissions</h2>
+          <p className="eyebrow">Audit-Protokoll</p>
+          <h2>Letzte Eintraege</h2>
         </div>
         <div className="recent-list">
-          {submissions.length === 0 && <p className="empty-text">No submissions yet.</p>}
+          {submissions.length === 0 && <p className="empty-text">Noch keine Eintraege.</p>}
           {submissions.map((item) => (
             <article className="submission-row" key={item.id}>
               <div>
-                <strong>{item.serial_number || "No serial"}</strong>
-                <span>{item.vendor || "Unknown vendor"} · {item.asset_type || "Unsorted"}</span>
+                <strong>{item.serial_number || "Keine Seriennummer"}</strong>
+                <span>{item.vendor || "Unbekannter Hersteller"} | {item.asset_type || "Nicht zugeordnet"}</span>
               </div>
-              <time>{new Date(item.created_at).toLocaleString()}</time>
+              <time>{germanDate(item.created_at)}</time>
             </article>
           ))}
         </div>

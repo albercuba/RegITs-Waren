@@ -14,6 +14,16 @@ const emptySettings = {
   password_configured: false,
 };
 
+function germanError(message) {
+  const map = {
+    "Admin authentication required": "Admin-Anmeldung erforderlich",
+    "SMTP connection failed": "SMTP-Verbindung fehlgeschlagen",
+    "Authentication failed": "Authentifizierung fehlgeschlagen",
+    "Request failed": "Anfrage fehlgeschlagen",
+  };
+  return map[message] || message;
+}
+
 export default function AdminPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -29,7 +39,7 @@ export default function AdminPage() {
       setSettings({ ...emptySettings, ...data, smtp_password: "" });
       setUnlocked(true);
     } catch (error) {
-      setStatus({ type: "error", message: error.message });
+      setStatus({ type: "error", message: germanError(error.message) });
     } finally {
       setBusy(false);
     }
@@ -41,9 +51,9 @@ export default function AdminPage() {
     try {
       const saved = await saveEmailSettings(adminPassword, settings);
       setSettings({ ...settings, ...saved, smtp_password: "" });
-      setStatus({ type: "success", message: "Settings saved" });
+      setStatus({ type: "success", message: "Einstellungen gespeichert" });
     } catch (error) {
-      setStatus({ type: "error", message: error.message });
+      setStatus({ type: "error", message: germanError(error.message) });
     } finally {
       setBusy(false);
     }
@@ -54,9 +64,9 @@ export default function AdminPage() {
     setStatus(null);
     try {
       await testEmailSettings(adminPassword, settings);
-      setStatus({ type: "success", message: "Test email sent" });
+      setStatus({ type: "success", message: "Test-E-Mail gesendet" });
     } catch (error) {
-      setStatus({ type: "error", message: error.message });
+      setStatus({ type: "error", message: germanError(error.message) });
     } finally {
       setBusy(false);
     }
@@ -65,16 +75,16 @@ export default function AdminPage() {
   return (
     <div className="page admin-page">
       <header className="mobile-header">
-        <p className="eyebrow">Protected area</p>
-        <h1>Admin Settings</h1>
+        <p className="eyebrow">Geschuetzter Bereich</p>
+        <h1>Admin-Einstellungen</h1>
       </header>
 
       {!unlocked ? (
         <section className="panel admin-login">
           <Lock size={32} />
-          <h2>Admin Login</h2>
+          <h2>Admin-Anmeldung</h2>
           <label>
-            <span>Admin password</span>
+            <span>Admin-Passwort</span>
             <input
               autoComplete="current-password"
               onChange={(event) => setAdminPassword(event.target.value)}
@@ -84,7 +94,7 @@ export default function AdminPage() {
             />
           </label>
           <button className="button primary" disabled={busy || !adminPassword} onClick={unlock} type="button">
-            Unlock Settings
+            Einstellungen entsperren
           </button>
           {status && <p className="status error">{status.message}</p>}
         </section>

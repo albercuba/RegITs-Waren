@@ -33,5 +33,5 @@ def require_admin(x_admin_password: str = Header(default="")) -> None:
     if not expected or not secrets.compare_digest(x_admin_password, expected):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Admin authentication required",
+            detail="Admin-Anmeldung erforderlich",
         )

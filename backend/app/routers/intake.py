@@ -27,7 +27,7 @@ def _extension(filename: str) -> str:
 
 def _validate_image(upload: UploadFile) -> None:
     if not upload.content_type or not upload.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image uploads are allowed")
+        raise HTTPException(status_code=400, detail="Nur Bilddateien sind erlaubt")
 
 
 def _save_upload(upload: UploadFile, prefix: str) -> Path:
@@ -41,7 +41,7 @@ def _save_upload(upload: UploadFile, prefix: str) -> Path:
             if size > limit:
                 output.close()
                 target.unlink(missing_ok=True)
-                raise HTTPException(status_code=413, detail=f"Image exceeds {get_settings().max_upload_mb} MB limit")
+                raise HTTPException(status_code=413, detail=f"Bild ueberschreitet {get_settings().max_upload_mb} MB Limit")
             output.write(chunk)
     return target
 
@@ -57,7 +57,7 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
     try:
         payload = IntakeMetadata(**json.loads(metadata))
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="Invalid metadata") from exc
+        raise HTTPException(status_code=400, detail="Ungueltige Metadaten") from exc
 
     image_path = _save_upload(photo, "intake")
     created_at = utc_now()
@@ -86,7 +86,7 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
     try:
         send_intake_email(payload, image_path, created_at)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Submission saved, but email failed: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"Eintrag gespeichert, aber E-Mail-Versand fehlgeschlagen: {exc}") from exc
 
     return {"id": submission_id, "created_at": created_at, "image_path": image_path.name}
 
@@ -107,5 +107,5 @@ def get_upload(filename: str) -> FileResponse:
     path = (_upload_dir() / Path(filename).name).resolve()
     upload_root = _upload_dir().resolve()
     if upload_root not in path.parents or not path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
     return FileResponse(path)

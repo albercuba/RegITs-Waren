@@ -38,6 +38,13 @@ def load_smtp_settings() -> SmtpSettings | None:
     return None
 
 
+def _german_datetime(value: str) -> str:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return value
+    return parsed.astimezone(timezone.utc).strftime("%d.%m.%Y, %H:%M Uhr")
+
 
 def validate_smtp(settings: SmtpSettings) -> None:
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
@@ -63,34 +70,34 @@ def settings_from_payload(payload: EmailSettingsIn) -> SmtpSettings:
 
 def send_test_email(settings: SmtpSettings) -> None:
     message = EmailMessage()
-    message["Subject"] = "RegITs-Waren SMTP test"
+    message["Subject"] = "RegITs-Waren SMTP-Test"
     message["From"] = settings.sender_email
     message["To"] = settings.recipient_email
-    message.set_content("SMTP settings are working.")
+    message.set_content("Die SMTP-Einstellungen funktionieren.")
     _send_message(settings, message)
 
 
 def send_intake_email(metadata: IntakeMetadata, image_path: Path, created_at: str) -> None:
     settings = load_smtp_settings()
     if not settings:
-        raise RuntimeError("SMTP settings are not configured")
+        raise RuntimeError("SMTP-Einstellungen sind nicht konfiguriert")
 
     message = EmailMessage()
-    serial = metadata.serial_number or "No serial"
-    message["Subject"] = f"Hardware intake: {serial}"
+    serial = metadata.serial_number or "Keine Seriennummer"
+    message["Subject"] = f"Hardware-Wareneingang: {serial}"
     message["From"] = settings.sender_email
     message["To"] = settings.recipient_email
     body = "\n".join(
         [
-            "New hardware intake submission",
+            "Neuer Hardware-Wareneingang",
             "",
-            f"Timestamp: {created_at}",
-            f"Serial number: {metadata.serial_number}",
-            f"Asset type: {metadata.asset_type}",
-            f"Vendor: {metadata.vendor}",
-            f"Model: {metadata.model}",
-            f"Received by: {metadata.received_by}",
-            f"Notes: {metadata.notes}",
+            f"Zeitpunkt: {_german_datetime(created_at)}",
+            f"Seriennummer: {metadata.serial_number}",
+            f"Geraetetyp: {metadata.asset_type}",
+            f"Hersteller: {metadata.vendor}",
+            f"Modell: {metadata.model}",
+            f"Angenommen von: {metadata.received_by}",
+            f"Notizen: {metadata.notes}",
         ]
     )
     message.set_content(body)

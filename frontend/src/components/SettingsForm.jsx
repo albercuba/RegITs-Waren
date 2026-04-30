@@ -6,16 +6,16 @@ export default function SettingsForm({ settings, onChange, onSave, onTest, busy,
   return (
     <section className="panel form-panel">
       <div className="section-title">
-        <p className="eyebrow">Protected admin</p>
-        <h2>SMTP Settings</h2>
+        <p className="eyebrow">Geschuetzter Adminbereich</p>
+        <h2>SMTP-Einstellungen</h2>
       </div>
       <div className="form-grid">
         <label>
-          <span>SMTP host</span>
+          <span>SMTP-Host</span>
           <input value={settings.smtp_host} onChange={(event) => setField("smtp_host", event.target.value)} />
         </label>
         <label>
-          <span>SMTP port</span>
+          <span>SMTP-Port</span>
           <input
             inputMode="numeric"
             type="number"
@@ -25,25 +25,25 @@ export default function SettingsForm({ settings, onChange, onSave, onTest, busy,
         </label>
       </div>
       <label>
-        <span>SMTP username</span>
+        <span>SMTP-Benutzername</span>
         <input value={settings.smtp_username} onChange={(event) => setField("smtp_username", event.target.value)} />
       </label>
       <label>
-        <span>SMTP password</span>
+        <span>SMTP-Passwort</span>
         <input
           autoComplete="new-password"
-          placeholder={settings.password_configured ? "Password already configured" : ""}
+          placeholder={settings.password_configured ? "Passwort ist bereits gespeichert" : ""}
           type="password"
           value={settings.smtp_password}
           onChange={(event) => setField("smtp_password", event.target.value)}
         />
       </label>
       <label>
-        <span>Sender email</span>
+        <span>Absenderadresse</span>
         <input type="email" value={settings.sender_email} onChange={(event) => setField("sender_email", event.target.value)} />
       </label>
       <label>
-        <span>Recipient email</span>
+        <span>Empfaengeradresse</span>
         <input
           type="email"
           value={settings.recipient_email}
@@ -52,16 +52,16 @@ export default function SettingsForm({ settings, onChange, onSave, onTest, busy,
       </label>
       <label className="toggle-row">
         <input checked={settings.use_tls} onChange={(event) => setField("use_tls", event.target.checked)} type="checkbox" />
-        <span>Use TLS / STARTTLS</span>
+        <span>TLS / STARTTLS verwenden</span>
       </label>
       <div className="settings-actions">
         <button className="button secondary" disabled={busy} onClick={onTest} type="button">
           <MailCheck size={20} />
-          <span>Test Email</span>
+          <span>Test-E-Mail</span>
         </button>
         <button className="button primary" disabled={busy} onClick={onSave} type="button">
           <Save size={20} />
-          <span>Save Settings</span>
+          <span>Einstellungen speichern</span>
         </button>
       </div>
       {status && <p className={status.type === "error" ? "status error" : "status success"}>{status.message}</p>}
