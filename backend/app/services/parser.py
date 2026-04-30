@@ -20,7 +20,9 @@ PRODUCT_BARCODES = {
 
 
 SERIAL_PATTERNS = (
-    r"(?<![A-Z0-9])(?:S/N|SN|Serial(?: Number)?|Service Tag)\s*[:#-]?\s*([A-Z0-9-]{5,})",
+    r"(?<![A-Z0-9])S\s*/\s*N\s*[:#-]?\s*([A-Z0-9-]{5,})",
+    r"(?<![A-Z0-9])SN\s*[:#-]\s*([A-Z0-9-]{5,})",
+    r"(?<![A-Z0-9])(?:Serial(?: Number)?|Service Tag)\s*[:#-]?\s*([A-Z0-9-]{5,})",
 )
 MODEL_PATTERNS = (
     r"(?:Model|Product)\s*[:#-]?\s*([A-Z0-9][A-Z0-9 ._/-]{2,40})",

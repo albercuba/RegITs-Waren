@@ -19,16 +19,20 @@ def _merge_text(parts: list[str]) -> str:
     return "\n".join(lines)
 
 
-def _ocr_text(image: Image.Image) -> str:
+def _enhanced_image(image: Image.Image) -> Image.Image:
     grayscale = ImageOps.grayscale(image)
-    enhanced = ImageEnhance.Contrast(ImageOps.autocontrast(grayscale)).enhance(1.8)
-    fast_text = pytesseract.image_to_string(enhanced, config="--psm 6")
-    if len(fast_text.strip()) >= 20:
-        return fast_text
+    return ImageEnhance.Contrast(ImageOps.autocontrast(grayscale)).enhance(1.8)
 
+
+def _ocr_text(image: Image.Image) -> str:
+    enhanced = _enhanced_image(image)
+    return pytesseract.image_to_string(enhanced, config="--psm 6")
+
+
+def _ocr_fallback_text(image: Image.Image) -> str:
+    enhanced = _enhanced_image(image)
     upscaled = enhanced.resize((enhanced.width * 2, enhanced.height * 2))
-    fallback_text = pytesseract.image_to_string(upscaled, config="--psm 11")
-    return _merge_text([fast_text, fallback_text])
+    return pytesseract.image_to_string(upscaled, config="--psm 11")
 
 
 def scan_image(path: Path) -> dict:
@@ -44,6 +48,14 @@ def scan_image(path: Path) -> dict:
         ocr_error = str(exc)
 
     fields = parse_label_data(raw_text, barcodes)
+    if not fields.get("serial_number") and raw_text and not ocr_error:
+        try:
+            fallback_text = _ocr_fallback_text(image)
+            raw_text = _merge_text([raw_text, fallback_text])
+            fields = parse_label_data(raw_text, barcodes)
+        except Exception as exc:  # Keep the fast OCR result if fallback fails.
+            ocr_error = str(exc)
+
     detected = any(fields.values())
     return {
         "status": "fields_detected" if detected else "manual_input_required",
