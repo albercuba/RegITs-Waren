@@ -115,22 +115,6 @@ def _known_product_from_barcode(text: str, barcodes: list[str]) -> dict[str, str
     return {}
 
 
-def _known_product_barcodes() -> set[str]:
-    return set(PRODUCT_BARCODES)
-
-
-def _serial_from_barcodes(barcodes: list[str]) -> str:
-    known_products = _known_product_barcodes()
-    for barcode in barcodes:
-        clean = barcode.strip()
-        digits = re.sub(r"\D", "", clean)
-        if digits in known_products:
-            continue
-        if clean and not (clean.isdigit() and 8 <= len(clean) <= 14):
-            return clean
-    return ""
-
-
 def _merge_notes(*groups: str | tuple[str, ...]) -> str:
     notes = []
     for group in groups:
@@ -151,8 +135,6 @@ def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, 
     notes = _build_notes(clean_text)
 
     serial = _first_match(SERIAL_PATTERNS, clean_text)
-    if not serial and barcodes:
-        serial = _serial_from_barcodes(barcodes)
 
     return {
         "serial_number": serial,
