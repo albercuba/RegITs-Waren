@@ -7,7 +7,7 @@ const fields = [
   ["received_by", "Angenommen von"],
 ];
 
-export default function FormFields({ form, onChange }) {
+export default function FormFields({ form, onChange, ocrStatus }) {
   const setField = (name, value) => onChange({ ...form, [name]: value });
 
   return (
@@ -15,6 +15,9 @@ export default function FormFields({ form, onChange }) {
       <div className="section-title">
         <p className="eyebrow">Automatisch erkannte Felder</p>
         <h2>Wareneingang Details</h2>
+      </div>
+      <div className="status-strip form-status">
+        <span>{ocrStatus}</span>
       </div>
       <label>
         <span>Gerätetyp</span>

@@ -124,12 +124,9 @@ export default function IntakePage() {
         scanning={scanning}
       />
 
-      <section className="status-strip">
-        <span>{ocrStatus}</span>
-      </section>
       {message && <section className={message.type === "error" ? "notice error" : "notice success"}>{message.text}</section>}
 
-      <FormFields form={form} onChange={setForm} />
+      <FormFields form={form} ocrStatus={ocrStatus} onChange={setForm} />
 
       <section className="panel recent-panel">
         <div className="section-title">
