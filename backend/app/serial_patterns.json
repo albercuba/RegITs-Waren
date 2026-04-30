@@ -6,13 +6,16 @@
     "SERIAL",
     "SERIAL NO",
     "SERIAL NUMBER",
-    "SERVICE TAG"
+    "SERVICE TAG",
+    "S-NUMMER",
+    "S NUMMER",
+    "SERIENNUMMER"
   ],
   "candidate_patterns": [
     {
       "name": "keyword_serial",
-      "regex": "(?:S\\s*/\\s*N|SN|SERIAL(?:\\s+NO|\\s+NUMBER)?|SERVICE\\s+TAG)\\s*[:#-]?\\s*([A-Z0-9-]{5,24})",
-      "base_score": 45
+      "regex": "(?:S[ \\t]*/[ \\t]*N|SN|SERIAL(?:[ \\t]+NO|[ \\t]+NUMBER)?|SERVICE[ \\t]+TAG|S[ \\t]*-?[ \\t]*NUMMER|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
+      "base_score": 100
     },
     {
       "name": "mixed_alphanumeric",
@@ -29,26 +32,26 @@
     "Dell": [
       {
         "name": "dell_service_tag",
-        "regex": "(?:SERVICE\\s+TAG|ST)\\s*[:#-]?\\s*([A-Z0-9]{5,7})",
+        "regex": "(?:SERVICE[ \\t]+TAG|ST)[ \\t]*[:#-]?[ \\t]*([A-Z0-9]{5,7})",
         "base_score": 55
       }
     ],
     "HP": [
-      {
-        "name": "hp_serial",
-        "regex": "(?:S\\s*/\\s*N|SN|SERIAL(?:\\s+NO|\\s+NUMBER)?)\\s*[:#-]?\\s*([A-Z0-9]{6,20})",
-        "base_score": 55
+    {
+      "name": "hp_serial",
+        "regex": "(?:S[ \\t]*/[ \\t]*N|SN|SERIAL(?:[ \\t]+NO|[ \\t]+NUMBER)?|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
+        "base_score": 100
       }
     ],
     "Lenovo": [
       {
         "name": "lenovo_serial",
-        "regex": "(?:S\\s*/\\s*N|SN|SERIAL)\\s*[:#-]?\\s*([A-Z0-9]{6,20})",
+        "regex": "(?:S[ \\t]*/[ \\t]*N|SN|SERIAL)[ \\t]*[:#-]?[ \\t]*([A-Z0-9]{6,20})",
         "base_score": 50
       },
       {
         "name": "lenovo_mtm_serial",
-        "regex": "(?:MTM|TYPE)\\s*[:#-]?\\s*([A-Z0-9-]{4,})\\s+(?:S\\s*/\\s*N|SN|SERIAL)\\s*[:#-]?\\s*([A-Z0-9]{6,20})",
+        "regex": "(?:MTM|TYPE)[ \\t]*[:#-]?[ \\t]*([A-Z0-9-]{4,})[ \\t]+(?:S[ \\t]*/[ \\t]*N|SN|SERIAL)[ \\t]*[:#-]?[ \\t]*([A-Z0-9]{6,20})",
         "base_score": 55
       }
     ]

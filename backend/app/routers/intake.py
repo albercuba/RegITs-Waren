@@ -96,6 +96,8 @@ def get_scan_debug(debug_id: int) -> dict:
     data = dict(row)
     for key in ("barcodes", "candidates", "fields"):
         data[key] = json.loads(data[key] or "[]" if key != "fields" else data[key] or "{}")
+    data["image_file"] = Path(data["image_path"]).name
+    data["image_url"] = f"/api/uploads/{data['image_file']}"
     return data
 
 

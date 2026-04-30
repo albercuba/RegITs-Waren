@@ -63,3 +63,8 @@ export async function testEmailSettings(adminPassword, settings) {
   });
   return parseResponse(response);
 }
+
+export async function getScanDebug(debugId) {
+  const response = await fetch(`${API_BASE}/scan/debug/${debugId}`);
+  return parseResponse(response);
+}

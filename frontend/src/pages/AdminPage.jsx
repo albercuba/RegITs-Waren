@@ -1,6 +1,6 @@
 import { Lock } from "lucide-react";
 import { useState } from "react";
-import { getEmailSettings, saveEmailSettings, testEmailSettings } from "../api.js";
+import { getEmailSettings, getScanDebug, saveEmailSettings, testEmailSettings } from "../api.js";
 import SettingsForm from "../components/SettingsForm.jsx";
 
 const emptySettings = {
@@ -52,6 +52,8 @@ export default function AdminPage() {
   const [settings, setSettings] = useState(emptySettings);
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [debugId, setDebugId] = useState("");
+  const [debugData, setDebugData] = useState(null);
 
   async function unlock() {
     setBusy(true);
@@ -106,6 +108,19 @@ export default function AdminPage() {
     }
   }
 
+  async function loadDebugData() {
+    if (!debugId) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      setDebugData(await getScanDebug(debugId));
+    } catch (error) {
+      setStatus({ type: "error", message: germanError(error.message) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="page admin-page">
       <header className="mobile-header">
@@ -133,14 +148,54 @@ export default function AdminPage() {
           {status && <p className="status error">{status.message}</p>}
         </section>
       ) : (
-        <SettingsForm
-          busy={busy}
-          onChange={setSettings}
-          onSave={handleSave}
-          onTest={handleTest}
-          settings={settings}
-          status={status}
-        />
+        <>
+          <SettingsForm
+            busy={busy}
+            onChange={setSettings}
+            onSave={handleSave}
+            onTest={handleTest}
+            settings={settings}
+            status={status}
+          />
+          <section className="panel form-panel">
+            <div className="section-title">
+              <p className="eyebrow">OCR Debug</p>
+              <h2>Scan prüfen</h2>
+            </div>
+            <label>
+              <span>Debug-ID</span>
+              <input value={debugId} onChange={(event) => setDebugId(event.target.value)} inputMode="numeric" />
+            </label>
+            <button className="button secondary" disabled={busy || !debugId} onClick={loadDebugData} type="button">
+              Debugdaten laden
+            </button>
+            {debugData && (
+              <div className="debug-view">
+                {debugData.image_url && <img alt="" src={debugData.image_url} />}
+                <div className="debug-grid">
+                  <strong>Seriennummer</strong>
+                  <span>{debugData.best_guess_serial || "Nicht erkannt"}</span>
+                  <strong>Konfidenz</strong>
+                  <span>{debugData.confidence_score ?? 0}</span>
+                </div>
+                <h3>Kandidaten</h3>
+                <div className="debug-candidates">
+                  {(debugData.candidates || []).map((candidate) => (
+                    <article key={`${candidate.value}-${candidate.score}`} className="submission-row">
+                      <div>
+                        <strong>{candidate.value}</strong>
+                        <span>{candidate.reason || (candidate.reasons || []).join(", ")}</span>
+                      </div>
+                      <span>{candidate.score}</span>
+                    </article>
+                  ))}
+                </div>
+                <h3>OCR Text</h3>
+                <pre>{debugData.raw_text}</pre>
+              </div>
+            )}
+          </section>
+        </>
       )}
     </div>
   );

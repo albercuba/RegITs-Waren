@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 from pyzbar.pyzbar import decode
 import pytesseract
 
@@ -21,18 +21,30 @@ def _merge_text(parts: list[str]) -> str:
 
 def _enhanced_image(image: Image.Image) -> Image.Image:
     grayscale = ImageOps.grayscale(image)
-    return ImageEnhance.Contrast(ImageOps.autocontrast(grayscale)).enhance(1.8)
+    contrasted = ImageEnhance.Contrast(ImageOps.autocontrast(grayscale)).enhance(1.8)
+    return contrasted.filter(ImageFilter.SHARPEN)
+
+
+def _threshold_image(image: Image.Image) -> Image.Image:
+    enhanced = _enhanced_image(image)
+    return enhanced.point(lambda pixel: 255 if pixel > 165 else 0)
 
 
 def _ocr_text(image: Image.Image) -> str:
     enhanced = _enhanced_image(image)
-    return pytesseract.image_to_string(enhanced, config="--psm 6")
+    return pytesseract.image_to_string(enhanced, config="--oem 3 --psm 6")
 
 
 def _ocr_fallback_text(image: Image.Image) -> str:
     enhanced = _enhanced_image(image)
     upscaled = enhanced.resize((enhanced.width * 2, enhanced.height * 2))
-    return pytesseract.image_to_string(upscaled, config="--psm 11")
+    thresholded = _threshold_image(image).resize((image.width * 2, image.height * 2))
+    return _merge_text(
+        [
+            pytesseract.image_to_string(upscaled, config="--oem 3 --psm 11"),
+            pytesseract.image_to_string(thresholded, config="--oem 3 --psm 6"),
+        ]
+    )
 
 
 def scan_image(path: Path) -> dict:
@@ -61,10 +73,14 @@ def scan_image(path: Path) -> dict:
         "status": "fields_detected" if detected else "manual_input_required",
         "fields": fields,
         "raw_text": raw_text,
+        "raw_ocr_text": raw_text,
         "barcodes": barcodes,
         "serial_debug": serial_debug,
         "best_guess_serial": serial_debug.get("best_guess_serial", ""),
         "confidence_score": serial_debug.get("confidence_score", 0),
+        "confidence": serial_debug.get("confidence", 0),
         "serial_candidates": serial_debug.get("candidates", []),
+        "candidates": serial_debug.get("candidates", []),
+        "warnings": serial_debug.get("warnings", []),
         "ocr_error": ocr_error,
     }
