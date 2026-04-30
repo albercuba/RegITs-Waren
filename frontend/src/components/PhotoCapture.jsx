@@ -27,7 +27,7 @@ export default function PhotoCapture({ previewUrl, onFileChange, onRetake, onSca
             </button>
             <button className="button secondary" disabled={disabled || scanning} onClick={onScan} type="button">
               <ScanLine size={20} />
-              <span>{scanning ? "Scanning..." : "Scan Label"}</span>
+              <span>{scanning ? "Scanning..." : "Scan Again"}</span>
             </button>
           </>
         )}

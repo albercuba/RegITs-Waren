@@ -9,7 +9,6 @@ const emptyForm = {
   asset_type: "",
   vendor: "",
   model: "",
-  ticket_number: "",
   received_by: "",
   notes: "",
   raw_text: "",
@@ -31,13 +30,28 @@ export default function IntakePage() {
 
   const canSend = useMemo(() => Boolean(photo && form.asset_type && (form.serial_number || form.notes)), [photo, form]);
 
+  async function scanSelectedPhoto(file) {
+    setScanning(true);
+    setOcrStatus("Scanning label...");
+    setMessage(null);
+    try {
+      const result = await scanPhoto(file);
+      setForm((current) => ({ ...current, ...result.fields, raw_text: result.raw_text || "" }));
+      setOcrStatus(result.status === "fields_detected" ? "Fields detected" : "Manual input required");
+    } catch (error) {
+      setOcrStatus("Manual input required");
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setScanning(false);
+    }
+  }
+
   function handleFileChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
     setPhoto(file);
     setPreviewUrl(URL.createObjectURL(file));
-    setOcrStatus("Ready to scan");
-    setMessage(null);
+    scanSelectedPhoto(file);
   }
 
   function resetPhoto() {
@@ -48,19 +62,7 @@ export default function IntakePage() {
 
   async function handleScan() {
     if (!photo) return;
-    setScanning(true);
-    setOcrStatus("Scanning label...");
-    setMessage(null);
-    try {
-      const result = await scanPhoto(photo);
-      setForm((current) => ({ ...current, ...result.fields, raw_text: result.raw_text || "" }));
-      setOcrStatus(result.status === "fields_detected" ? "Fields detected" : "Manual input required");
-    } catch (error) {
-      setOcrStatus("Manual input required");
-      setMessage({ type: "error", text: error.message });
-    } finally {
-      setScanning(false);
-    }
+    await scanSelectedPhoto(photo);
   }
 
   async function handleSubmit() {

@@ -4,7 +4,6 @@ const fields = [
   ["serial_number", "Serial number"],
   ["vendor", "Vendor"],
   ["model", "Model"],
-  ["ticket_number", "Ticket / PO number"],
   ["received_by", "Received by"],
 ];
 

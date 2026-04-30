@@ -33,7 +33,6 @@ def init_db() -> None:
                 asset_type TEXT,
                 vendor TEXT,
                 model TEXT,
-                ticket_number TEXT,
                 received_by TEXT,
                 notes TEXT,
                 image_path TEXT NOT NULL,

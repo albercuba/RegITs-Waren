@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from email.message import EmailMessage
 from pathlib import Path
 
-from app.config import get_settings
 from app.database import get_db
 from app.models.schemas import EmailSettingsIn, IntakeMetadata
 from app.services.security import decrypt_secret
@@ -36,19 +35,8 @@ def load_smtp_settings() -> SmtpSettings | None:
             use_tls=bool(row["use_tls"]),
         )
 
-    settings = get_settings()
-    if not settings.smtp_host or not settings.smtp_sender_email or not settings.smtp_recipient_email:
-        return None
+    return None
 
-    return SmtpSettings(
-        smtp_host=settings.smtp_host,
-        smtp_port=settings.smtp_port,
-        smtp_username=settings.smtp_username or "",
-        smtp_password=settings.smtp_password or "",
-        sender_email=settings.smtp_sender_email,
-        recipient_email=settings.smtp_recipient_email,
-        use_tls=settings.smtp_use_tls,
-    )
 
 
 def validate_smtp(settings: SmtpSettings) -> None:
@@ -101,7 +89,6 @@ def send_intake_email(metadata: IntakeMetadata, image_path: Path, created_at: st
             f"Asset type: {metadata.asset_type}",
             f"Vendor: {metadata.vendor}",
             f"Model: {metadata.model}",
-            f"Ticket / PO number: {metadata.ticket_number}",
             f"Received by: {metadata.received_by}",
             f"Notes: {metadata.notes}",
         ]

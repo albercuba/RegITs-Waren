@@ -1,5 +1,4 @@
 import json
-import shutil
 import uuid
 from pathlib import Path
 
@@ -66,10 +65,9 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
         cursor = conn.execute(
             """
             INSERT INTO submissions (
-                created_at, serial_number, asset_type, vendor, model, ticket_number,
-                received_by, notes, image_path, raw_text
+                created_at, serial_number, asset_type, vendor, model, received_by, notes, image_path, raw_text
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 created_at,
@@ -77,7 +75,6 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
                 payload.asset_type,
                 payload.vendor,
                 payload.model,
-                payload.ticket_number,
                 payload.received_by,
                 payload.notes,
                 str(image_path),

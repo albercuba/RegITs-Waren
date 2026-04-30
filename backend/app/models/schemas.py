@@ -6,7 +6,6 @@ class IntakeMetadata(BaseModel):
     asset_type: str = ""
     vendor: str = ""
     model: str = ""
-    ticket_number: str = ""
     received_by: str = ""
     notes: str = ""
     raw_text: str = ""

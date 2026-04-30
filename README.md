@@ -2,7 +2,7 @@
 
 Mobile-first internal web application for IT hardware intake.
 
-Employees can take a label photo with a phone, scan it with OCR/barcode detection, edit the detected metadata, and send an email with the photo attached. Submissions are stored in SQLite for auditing. SMTP settings are configured from the protected Admin page.
+Employees can take a label photo with a phone, automatically scan it with OCR/barcode detection, edit the detected metadata, and send an email with the photo attached. Submissions are stored in SQLite for auditing. SMTP settings are configured from the protected Admin page.
 
 ## Project Structure
 
@@ -80,8 +80,6 @@ The Admin page lets you configure:
 
 The backend validates the SMTP connection before saving. The SMTP password is encrypted using `APP_SECRET_KEY`, is never returned to the frontend, and should not appear in logs.
 
-If no database SMTP settings exist, the backend uses the optional fallback SMTP values from `.env`.
-
 ## Phone Camera Notes
 
 The app uses:
@@ -99,7 +97,7 @@ The Docker backend image installs:
 - Tesseract OCR
 - zbar runtime for `pyzbar`
 
-The backend extracts serial number, vendor, model, and ticket/PO values with regex-based parsing. If detection fails, fields remain editable and empty.
+The backend extracts serial number, vendor, and model values with regex-based parsing. If detection fails, fields remain editable and empty.
 
 ## API
 
@@ -121,3 +119,4 @@ Admin endpoints require the `X-Admin-Password` header.
 - SMTP password is encrypted at rest.
 - Admin settings require `ADMIN_PASSWORD`.
 - Use HTTPS for production.
+
