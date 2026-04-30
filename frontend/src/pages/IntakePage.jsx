@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { createSubmission, getSubmissions, scanPhoto } from "../api.js";
+import { useMemo, useState } from "react";
+import { createSubmission, scanPhoto } from "../api.js";
 import FormFields from "../components/FormFields.jsx";
 import PhotoCapture from "../components/PhotoCapture.jsx";
 import SendButton from "../components/SendButton.jsx";
@@ -13,16 +13,6 @@ const emptyForm = {
   notes: "",
   raw_text: "",
 };
-
-function germanDate(value) {
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 function germanError(message) {
   const map = {
@@ -48,11 +38,6 @@ export default function IntakePage() {
   const [message, setMessage] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [sending, setSending] = useState(false);
-  const [submissions, setSubmissions] = useState([]);
-
-  useEffect(() => {
-    getSubmissions().then(setSubmissions).catch(() => setSubmissions([]));
-  }, []);
 
   const canSend = useMemo(() => Boolean(photo && form.asset_type && (form.serial_number || form.notes)), [photo, form]);
 
@@ -100,7 +85,6 @@ export default function IntakePage() {
       setMessage({ type: "success", text: `Eintrag #${result.id} gesendet` });
       setForm(emptyForm);
       resetPhoto();
-      setSubmissions(await getSubmissions());
     } catch (error) {
       setMessage({ type: "error", text: germanError(error.message) });
     } finally {
@@ -127,25 +111,6 @@ export default function IntakePage() {
       {message && <section className={message.type === "error" ? "notice error" : "notice success"}>{message.text}</section>}
 
       <FormFields form={form} ocrStatus={ocrStatus} onChange={setForm} />
-
-      <section className="panel recent-panel">
-        <div className="section-title">
-          <p className="eyebrow">Audit-Protokoll</p>
-          <h2>Letzte Einträge</h2>
-        </div>
-        <div className="recent-list">
-          {submissions.length === 0 && <p className="empty-text">Noch keine Einträge.</p>}
-          {submissions.map((item) => (
-            <article className="submission-row" key={item.id}>
-              <div>
-                <strong>{item.serial_number || "Keine Seriennummer"}</strong>
-                <span>{item.vendor || "Unbekannter Hersteller"} | {item.asset_type || "Nicht zugeordnet"}</span>
-              </div>
-              <time>{germanDate(item.created_at)}</time>
-            </article>
-          ))}
-        </div>
-      </section>
 
       <SendButton disabled={!canSend} onClick={handleSubmit} sending={sending} />
     </div>
