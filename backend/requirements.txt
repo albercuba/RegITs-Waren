@@ -1,0 +1,9 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pillow==11.1.0
+pytesseract==0.3.13
+pyzbar==0.1.9
+cryptography==44.0.0
+pydantic-settings==2.7.1
+email-validator==2.2.0

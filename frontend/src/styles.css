@@ -1,0 +1,390 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #08111f;
+  color: #edf6ff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(29, 155, 240, 0.22), transparent 32rem),
+    linear-gradient(160deg, #08111f 0%, #0d1726 52%, #0a0d16 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: none;
+}
+
+.content {
+  width: 100%;
+}
+
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 18px 14px 108px;
+}
+
+.mobile-header {
+  padding: 10px 2px 18px;
+}
+
+.mobile-header h1,
+.section-title h2,
+.placeholder-panel h2,
+.admin-login h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.mobile-header h1 {
+  font-size: clamp(2rem, 10vw, 3.4rem);
+  line-height: 1;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #85a4c7;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.panel,
+.photo-card {
+  border: 1px solid rgba(139, 178, 219, 0.18);
+  border-radius: 8px;
+  background: rgba(12, 25, 41, 0.86);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.28);
+}
+
+.photo-card {
+  overflow: hidden;
+}
+
+.photo-preview {
+  display: grid;
+  min-height: 265px;
+  place-items: center;
+  background: #101b2b;
+}
+
+.photo-preview img {
+  display: block;
+  width: 100%;
+  max-height: 48vh;
+  object-fit: contain;
+}
+
+.empty-preview {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  color: #8eb2d9;
+  font-weight: 800;
+}
+
+.photo-actions,
+.settings-actions {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.button,
+.send-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.primary,
+.send-button {
+  background: #31a6ff;
+  color: #03101d;
+}
+
+.secondary {
+  border-color: rgba(49, 166, 255, 0.38);
+  background: rgba(49, 166, 255, 0.12);
+  color: #d6efff;
+}
+
+.ghost {
+  border-color: rgba(139, 178, 219, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d6efff;
+}
+
+.status-strip,
+.notice {
+  margin-top: 12px;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.status-strip {
+  border: 1px solid rgba(49, 166, 255, 0.25);
+  background: rgba(49, 166, 255, 0.1);
+  color: #9fd6ff;
+}
+
+.notice.success,
+.status.success {
+  color: #80f5bd;
+}
+
+.notice.error,
+.status.error {
+  color: #ff9a9a;
+}
+
+.form-panel,
+.recent-panel,
+.placeholder-panel,
+.admin-login {
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.section-title {
+  margin-bottom: 16px;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: #9bb8d8;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(139, 178, 219, 0.2);
+  border-radius: 8px;
+  background: rgba(4, 12, 22, 0.72);
+  color: #f4fbff;
+  outline: none;
+  padding: 14px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #31a6ff;
+  box-shadow: 0 0 0 3px rgba(49, 166, 255, 0.18);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-row input {
+  width: 22px;
+  height: 22px;
+}
+
+.recent-list {
+  display: grid;
+  gap: 10px;
+}
+
+.submission-row {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(139, 178, 219, 0.14);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.submission-row div {
+  display: grid;
+  gap: 4px;
+}
+
+.submission-row span,
+.submission-row time,
+.empty-text,
+.placeholder-panel p {
+  color: #8ca9c7;
+}
+
+.sticky-send {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(8, 17, 31, 0), rgba(8, 17, 31, 0.95) 30%);
+}
+
+.send-button {
+  width: min(732px, 100%);
+  min-height: 62px;
+  margin: 0 auto;
+  display: flex;
+  font-size: 1.05rem;
+}
+
+.admin-login {
+  display: grid;
+  gap: 12px;
+}
+
+.status {
+  margin: 0;
+  font-weight: 800;
+}
+
+@media (min-width: 900px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 272px 1fr;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    border-right: 1px solid rgba(139, 178, 219, 0.14);
+    background: rgba(5, 12, 22, 0.9);
+    padding: 22px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .brand-mark {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 8px;
+    background: #31a6ff;
+    color: #03101d;
+    font-weight: 950;
+  }
+
+  .brand strong,
+  .brand small {
+    display: block;
+  }
+
+  .brand small {
+    margin-top: 4px;
+    color: #7e9ab9;
+  }
+
+  nav {
+    display: grid;
+    gap: 8px;
+  }
+
+  .nav-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #9fb9d5;
+    padding: 0 12px;
+    text-align: left;
+    font-weight: 850;
+  }
+
+  .nav-button.active {
+    border-color: rgba(49, 166, 255, 0.32);
+    background: rgba(49, 166, 255, 0.12);
+    color: #eff9ff;
+  }
+
+  .page {
+    max-width: 980px;
+    padding: 28px 28px 118px;
+  }
+
+  .mobile-header h1 {
+    font-size: 3.3rem;
+  }
+
+  .photo-actions,
+  .settings-actions,
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .photo-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .submission-row {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .sticky-send {
+    left: 272px;
+  }
+}
