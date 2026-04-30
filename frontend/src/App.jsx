@@ -1,5 +1,5 @@
-import { ClipboardList, Inbox, Mail, Settings, ShieldCheck, Sun } from "lucide-react";
-import { useState } from "react";
+import { ClipboardList, Inbox, Mail, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 import AdminPage from "./pages/AdminPage.jsx";
 import IntakePage from "./pages/IntakePage.jsx";
 
@@ -21,8 +21,21 @@ function Placeholder({ title }) {
   );
 }
 
+function getInitialTheme() {
+  const saved = localStorage.getItem("regits-theme");
+  if (saved === "dark" || saved === "light") return saved;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export default function App() {
   const [activeView, setActiveView] = useState("receiving");
+  const [theme, setTheme] = useState(getInitialTheme);
+  const isDark = theme === "dark";
+
+  useEffect(() => {
+    document.body.dataset.theme = theme;
+    localStorage.setItem("regits-theme", theme);
+  }, [theme]);
 
   return (
     <div className="app-shell">
@@ -31,9 +44,17 @@ export default function App() {
         <div className="topbar-title">IT-Hardware Wareneingang</div>
         <div className="topbar-right">
           <span className="topbar-count">MVP</span>
-          <span className="theme-pill">
-            <Sun size={14} />
-          </span>
+          <button
+            aria-label={isDark ? "Helles Design aktivieren" : "Dunkles Design aktivieren"}
+            className={isDark ? "theme-switch dark" : "theme-switch"}
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            title={isDark ? "Helles Design" : "Dunkles Design"}
+            type="button"
+          >
+            <Sun className="theme-icon sun" size={14} />
+            <span className="theme-track"><span className="theme-thumb" /></span>
+            <Moon className="theme-icon moon" size={14} />
+          </button>
         </div>
       </header>
 
