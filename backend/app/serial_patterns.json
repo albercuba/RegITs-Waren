@@ -2,8 +2,12 @@
   "confidence_threshold": 70,
   "keywords": [
     "S/N",
+    "S N",
     "SN",
+    "SNR",
+    "SER NO",
     "SERIAL",
+    "SERIALNO",
     "SERIAL NO",
     "SERIAL NUMBER",
     "SERVICE TAG",
@@ -14,7 +18,7 @@
   "candidate_patterns": [
     {
       "name": "keyword_serial",
-      "regex": "(?:S[ \\t]*/[ \\t]*N|SN|SERIAL(?:[ \\t]+NO|[ \\t]+NUMBER)?|SERVICE[ \\t]+TAG|S[ \\t]*-?[ \\t]*NUMMER|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
+      "regex": "\\b(?:S[ \\t]*/?[ \\t]*N|SN|SNR|SER(?:IAL)?[ \\t]*(?:NO|NUMBER)?|SERIALNO|SERVICE[ \\t]+TAG|S[ \\t]*-?[ \\t]*NUMMER|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
       "base_score": 100
     },
     {
@@ -39,7 +43,7 @@
     "HP": [
     {
       "name": "hp_serial",
-        "regex": "(?:S[ \\t]*/[ \\t]*N|SN|SERIAL(?:[ \\t]+NO|[ \\t]+NUMBER)?|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
+        "regex": "\\b(?:S[ \\t]*/?[ \\t]*N|SN|SNR|SER(?:IAL)?[ \\t]*(?:NO|NUMBER)?|SERIALNO|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
         "base_score": 100
       }
     ],

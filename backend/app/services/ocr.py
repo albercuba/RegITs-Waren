@@ -19,6 +19,22 @@ def _merge_text(parts: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _decode_barcodes(images: list[Image.Image]) -> list[str]:
+    values = []
+    seen = set()
+    for image in images:
+        try:
+            decoded = decode(image)
+        except Exception:
+            decoded = []
+        for item in decoded:
+            value = item.data.decode("utf-8", errors="ignore").strip()
+            if value and value not in seen:
+                values.append(value)
+                seen.add(value)
+    return values
+
+
 def _enhanced_image(image: Image.Image) -> Image.Image:
     grayscale = ImageOps.grayscale(image)
     contrasted = ImageEnhance.Contrast(ImageOps.autocontrast(grayscale)).enhance(1.8)
@@ -30,20 +46,37 @@ def _threshold_image(image: Image.Image) -> Image.Image:
     return enhanced.point(lambda pixel: 255 if pixel > 165 else 0)
 
 
+def _upscale(image: Image.Image, factor: int = 2) -> Image.Image:
+    return image.resize((image.width * factor, image.height * factor), Image.Resampling.LANCZOS)
+
+
+def _rotations(image: Image.Image) -> list[Image.Image]:
+    return [image, image.rotate(90, expand=True), image.rotate(180, expand=True), image.rotate(270, expand=True)]
+
+
 def _ocr_text(image: Image.Image) -> str:
     enhanced = _enhanced_image(image)
-    return pytesseract.image_to_string(enhanced, config="--oem 3 --psm 6")
+    return pytesseract.image_to_string(enhanced, config="--oem 3 --psm 6 -c preserve_interword_spaces=1")
 
 
 def _ocr_fallback_text(image: Image.Image) -> str:
-    enhanced = _enhanced_image(image)
-    upscaled = enhanced.resize((enhanced.width * 2, enhanced.height * 2))
-    thresholded = _threshold_image(image).resize((image.width * 2, image.height * 2))
+    images = [
+        _upscale(_enhanced_image(image)),
+        _upscale(_threshold_image(image)),
+        _upscale(ImageOps.invert(_threshold_image(image))),
+    ]
+    rotated_images = [_upscale(_enhanced_image(rotated)) for rotated in _rotations(image)[1:]]
+    configs = [
+        "--oem 3 --psm 6 -c preserve_interword_spaces=1",
+        "--oem 3 --psm 11",
+        "--oem 3 --psm 12",
+    ]
+    texts = []
+    for candidate in [*images, *rotated_images]:
+        for config in configs:
+            texts.append(pytesseract.image_to_string(candidate, config=config))
     return _merge_text(
-        [
-            pytesseract.image_to_string(upscaled, config="--oem 3 --psm 11"),
-            pytesseract.image_to_string(thresholded, config="--oem 3 --psm 6"),
-        ]
+        texts
     )
 
 
@@ -55,7 +88,7 @@ def scan_image(path: Path) -> dict:
     try:
         image = ImageOps.exif_transpose(Image.open(path))
         raw_text = _ocr_text(image)
-        barcodes = [item.data.decode("utf-8", errors="ignore") for item in decode(image)]
+        barcodes = _decode_barcodes([image, _enhanced_image(image), _threshold_image(image), *_rotations(image)[1:]])
     except Exception as exc:  # OCR tooling can fail if binaries are missing.
         ocr_error = str(exc)
 

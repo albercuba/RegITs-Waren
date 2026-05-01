@@ -12,6 +12,12 @@ class SerialExtractionTests(unittest.TestCase):
     def test_logitech_sn_colon_without_space(self) -> None:
         self.assert_serial("S/N:2601TVZ1C6D9", "2601TVZ1C6D9")
 
+    def test_ocr_split_sn_label(self) -> None:
+        self.assert_serial("S N 2601TVZ1C6D9", "2601TVZ1C6D9")
+
+    def test_ocr_short_serial_label(self) -> None:
+        self.assert_serial("SER NO 8CC3459KLM", "8CC3459KLM")
+
     def test_hp_dock_prefers_sn_over_part_and_mac(self) -> None:
         self.assert_serial(
             "\n".join(
