@@ -21,6 +21,7 @@ function germanError(message) {
     "Invalid metadata": "Ungültige Metadaten",
     "SMTP settings are not configured": "SMTP-Einstellungen sind nicht konfiguriert",
     "Request failed": "Anfrage fehlgeschlagen",
+    "Scan timed out": "Der Scan hat zu lange gedauert. Bitte ein naeheres, schaerferes Foto versuchen oder die Daten manuell eintragen.",
   };
   if (message?.startsWith("Submission saved, but email failed")) {
     return "Eintrag gespeichert, aber E-Mail-Versand fehlgeschlagen";

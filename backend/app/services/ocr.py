@@ -5,6 +5,7 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 from pyzbar.pyzbar import decode
 import pytesseract
 
+from app.config import get_settings
 from app.services.parser import parse_label_data_with_debug
 
 
@@ -51,6 +52,15 @@ def _upscale(image: Image.Image, factor: int = 2) -> Image.Image:
     return image.resize((image.width * factor, image.height * factor), Image.Resampling.LANCZOS)
 
 
+def _fit_for_ocr(image: Image.Image) -> Image.Image:
+    max_dimension = get_settings().ocr_max_dimension
+    if max(image.size) <= max_dimension:
+        return image
+    fitted = image.copy()
+    fitted.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+    return fitted
+
+
 def _rotations(image: Image.Image) -> list[Image.Image]:
     return [image, image.rotate(90, expand=True), image.rotate(180, expand=True), image.rotate(270, expand=True)]
 
@@ -66,29 +76,37 @@ def _ocr_language_config() -> str:
 
 
 def _ocr_text(image: Image.Image) -> str:
-    enhanced = _enhanced_image(image)
+    enhanced = _enhanced_image(_fit_for_ocr(image))
     return pytesseract.image_to_string(
         enhanced,
         config=f"{_ocr_language_config()}--oem 3 --psm 6 -c preserve_interword_spaces=1",
+        timeout=get_settings().ocr_timeout_seconds,
     )
 
 
 def _ocr_fallback_text(image: Image.Image) -> str:
+    image = _fit_for_ocr(image)
     images = [
         _upscale(_enhanced_image(image)),
         _upscale(_threshold_image(image)),
-        _upscale(ImageOps.invert(_threshold_image(image))),
     ]
-    rotated_images = [_upscale(_enhanced_image(rotated)) for rotated in _rotations(image)[1:]]
     configs = [
         f"{_ocr_language_config()}--oem 3 --psm 6 -c preserve_interword_spaces=1",
         f"{_ocr_language_config()}--oem 3 --psm 11",
-        f"{_ocr_language_config()}--oem 3 --psm 12",
     ]
     texts = []
-    for candidate in [*images, *rotated_images]:
+    for candidate in images:
         for config in configs:
-            texts.append(pytesseract.image_to_string(candidate, config=config))
+            try:
+                texts.append(
+                    pytesseract.image_to_string(
+                        candidate,
+                        config=config,
+                        timeout=get_settings().ocr_fallback_timeout_seconds,
+                    )
+                )
+            except RuntimeError:
+                continue
     return _merge_text(
         texts
     )

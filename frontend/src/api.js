@@ -4,6 +4,9 @@ async function parseResponse(response) {
   const contentType = response.headers.get("content-type") || "";
   const data = contentType.includes("application/json") ? await response.json() : await response.text();
   if (!response.ok) {
+    if (response.status === 504) {
+      throw new Error("Scan timed out");
+    }
     const detail = typeof data === "object" ? data.detail : data;
     const message = Array.isArray(detail)
       ? detail.map((item) => item.msg || item.message || "Validierungsfehler").join(", ")
