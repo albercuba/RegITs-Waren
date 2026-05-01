@@ -2,7 +2,7 @@ import { Camera, RotateCcw, ScanLine } from "lucide-react";
 
 export default function PhotoCapture({ previewUrl, onFileChange, onRetake, onScan, scanning, disabled }) {
   return (
-    <section className="photo-card">
+    <section className={previewUrl ? "photo-card has-preview" : "photo-card is-empty"}>
       <div className="photo-preview">
         {previewUrl ? (
           <img alt="Vorschau der erhaltenen Hardware" src={previewUrl} />

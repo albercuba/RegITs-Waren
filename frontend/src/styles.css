@@ -262,6 +262,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .photo-card {
   display: flex;
   flex-direction: column;
+  position: relative;
   overflow: hidden;
 }
 
@@ -628,6 +629,27 @@ textarea { resize: vertical; }
 
   .photo-actions > .button:only-child {
     grid-column: 2;
+  }
+
+  .photo-card.is-empty .empty-preview {
+    transform: translateY(-72px);
+  }
+
+  .photo-card.is-empty .photo-actions {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 0;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .photo-card.is-empty .photo-actions > .button:only-child {
+    grid-column: auto;
+    width: min(260px, calc(100% - 32px));
+    pointer-events: auto;
   }
 
   .intake-page {
