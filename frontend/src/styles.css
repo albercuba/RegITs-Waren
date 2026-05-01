@@ -626,6 +626,10 @@ textarea { resize: vertical; }
 
   .photo-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
+  .photo-actions > .button:only-child {
+    grid-column: 2;
+  }
+
   .intake-page {
     display: grid;
     grid-template-columns: minmax(420px, 520px) minmax(460px, 1fr);
