@@ -12,12 +12,12 @@ The most important extracted field is the serial number. Scan behavior should fa
 - Treat serial-shaped barcode values as high-priority signals.
 - Support German and English serial labels, including `S/N`, `SN`, `SNR`, `Ser.-Nr.`, `Serien-Nr.`, `Seriennummer`, `S-Nummer`, `Serial No`, and `Service Tag`.
 - Avoid confusing serial numbers with part numbers, article numbers, model numbers, MAC addresses, EAN/GTIN/UPC barcodes, quantities, or regulatory identifiers.
-- Keep local OCR work bounded so normal scans stay quick.
+- Keep OCR fallback work limited to uncertain cases so normal scans stay quick.
 - Preserve manual correction paths; users must always be able to fix OCR results before submitting.
 
 ## Tech Stack
 
-- Backend: FastAPI, SQLite, Pillow, local CPU PaddleOCR, pyzbar/zbar.
+- Backend: FastAPI, SQLite, Pillow, Tesseract OCR, pyzbar.
 - Frontend: React.
 - Runtime: Docker Compose.
 - Tests: Python `unittest`.
@@ -25,7 +25,7 @@ The most important extracted field is the serial number. Scan behavior should fa
 ## Coding Rules
 
 - Keep changes small, focused, and aligned with the existing code style.
-- Prefer parser/ranking improvements before introducing heavier OCR workflows.
+- Prefer parser/ranking improvements before introducing heavier OCR or ML workflows.
 - Use structured parser rules and tests for known label formats.
 - Add or update tests whenever OCR, barcode, parser, or serial extraction behavior changes.
 - Do not revert unrelated user changes.

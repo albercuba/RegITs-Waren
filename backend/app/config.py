@@ -10,9 +10,8 @@ class Settings(BaseSettings):
     upload_dir: str = "/app/uploads"
     max_upload_mb: int = 12
     ocr_max_dimension: int = 1800
-    paddleocr_lang: str = "german"
-    paddleocr_use_angle_cls: bool = True
-    paddleocr_min_confidence: float = 0.35
+    ocr_timeout_seconds: int = 8
+    ocr_fallback_timeout_seconds: int = 3
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

@@ -94,19 +94,10 @@ Viele mobile Browser erlauben den besten Kamerazugriff nur über HTTPS, außer b
 
 Das Backend-Image installiert:
 
-- PaddleOCR mit PaddlePaddle CPU Runtime
+- Tesseract OCR
 - zbar Runtime für `pyzbar`
 
-PaddleOCR läuft lokal im Backend-Container. Hochgeladene Bilder werden nicht an externe OCR-Dienste gesendet. Beim ersten Start kann PaddleOCR die benötigten OCR-Modelldateien herunterladen; im Docker-Betrieb werden sie unter `/app/data/paddleocr` im Daten-Volume abgelegt. Die Standardsprache ist `german`, weil die Geräteetiketten deutschsprachige Feldnamen enthalten und Seriennummern/englische Produktnamen weiterhin mit lateinischen Zeichen erkannt werden. Bei rein englischen Etiketten kann `PADDLEOCR_LANG=en` gesetzt werden.
-
-Barcode-Erkennung nutzt weiterhin zbar/`pyzbar` und wird mit dem OCR-Text zusammen an die bestehende regelbasierte Auswertung übergeben. Das Backend erkennt Seriennummer, Hersteller und Modell per Parser- und Scoring-Regeln. Wenn keine Werte erkannt werden, bleiben die Felder leer und können manuell bearbeitet werden.
-
-Manueller OCR-Testpfad:
-
-1. Anwendung mit `docker compose up --build` starten.
-2. `http://localhost:8081` öffnen.
-3. Ein Geräteetikett fotografieren oder hochladen.
-4. Prüfen, ob `Seriennummer`, `Hersteller`, `Modell` und `Barcodes` im Formular bzw. im Admin-OCR-Debug plausibel erscheinen.
+Das Backend erkennt Seriennummer, Hersteller und Modell per regelbasierter Auswertung. Wenn keine Werte erkannt werden, bleiben die Felder leer und können manuell bearbeitet werden.
 
 ## API
 

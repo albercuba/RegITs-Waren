@@ -1,9 +1,9 @@
 from functools import lru_cache
-import tempfile
 from pathlib import Path
-from typing import Any
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+from pyzbar.pyzbar import decode
+import pytesseract
 
 from app.config import get_settings
 from app.services.parser import parse_label_data_with_debug
@@ -24,11 +24,6 @@ def _merge_text(parts: list[str]) -> str:
 def _decode_barcodes(images: list[Image.Image]) -> list[str]:
     values = []
     seen = set()
-    try:
-        from pyzbar.pyzbar import decode
-    except Exception:
-        return values
-
     for image in images:
         try:
             decoded = decode(image)
@@ -53,6 +48,10 @@ def _threshold_image(image: Image.Image) -> Image.Image:
     return enhanced.point(lambda pixel: 255 if pixel > 165 else 0)
 
 
+def _upscale(image: Image.Image, factor: int = 2) -> Image.Image:
+    return image.resize((image.width * factor, image.height * factor), Image.Resampling.LANCZOS)
+
+
 def _fit_for_ocr(image: Image.Image) -> Image.Image:
     max_dimension = get_settings().ocr_max_dimension
     if max(image.size) <= max_dimension:
@@ -67,97 +66,70 @@ def _rotations(image: Image.Image) -> list[Image.Image]:
 
 
 @lru_cache(maxsize=1)
-def get_ocr_engine() -> Any:
+def _ocr_language_config() -> str:
     try:
-        from paddleocr import PaddleOCR
-    except Exception as exc:
-        raise RuntimeError("PaddleOCR is not installed or could not be imported") from exc
+        languages = set(pytesseract.get_languages(config=""))
+    except Exception:
+        return ""
+    preferred = [language for language in ("deu", "eng") if language in languages]
+    return f"-l {'+'.join(preferred)} " if preferred else ""
 
-    settings = get_settings()
-    # Keep the engine cached; loading PaddleOCR models for every scan would be very slow.
-    return PaddleOCR(
-        lang=settings.paddleocr_lang,
-        use_angle_cls=settings.paddleocr_use_angle_cls,
-        show_log=False,
-        use_gpu=False,
-        drop_score=settings.paddleocr_min_confidence,
+
+def _ocr_text(image: Image.Image) -> str:
+    enhanced = _enhanced_image(_fit_for_ocr(image))
+    return pytesseract.image_to_string(
+        enhanced,
+        config=f"{_ocr_language_config()}--oem 3 --psm 6 -c preserve_interword_spaces=1",
+        timeout=get_settings().ocr_timeout_seconds,
     )
 
 
-def _paddleocr_result_pages(result: Any) -> list:
-    if not result:
-        return []
-    if isinstance(result, list) and result and _looks_like_ocr_line(result[0]):
-        return [result]
-    return result if isinstance(result, list) else []
-
-
-def _looks_like_ocr_line(value: Any) -> bool:
-    return (
-        isinstance(value, (list, tuple))
-        and len(value) >= 2
-        and isinstance(value[1], (list, tuple))
-        and len(value[1]) >= 2
-        and isinstance(value[1][0], str)
-    )
-
-
-def _metadata_line(box: Any, text: str, confidence: Any) -> dict:
-    return {
-        "text": text,
-        "confidence": float(confidence) if confidence is not None else None,
-        "box": box,
-    }
-
-
-def _ocr_text_from_image(image: Image.Image) -> tuple[str, list[dict]]:
-    fitted = _fit_for_ocr(image).convert("RGB")
-    temp_path = ""
-    try:
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp:
-            temp_path = temp.name
-        fitted.save(temp_path)
-        result = get_ocr_engine().ocr(temp_path, cls=get_settings().paddleocr_use_angle_cls)
-    finally:
-        if temp_path:
-            Path(temp_path).unlink(missing_ok=True)
-    lines: list[str] = []
-    metadata: list[dict] = []
-
-    for page in _paddleocr_result_pages(result):
-        for item in page or []:
+def _ocr_fallback_text(image: Image.Image) -> str:
+    image = _fit_for_ocr(image)
+    images = [
+        _upscale(_enhanced_image(image)),
+        _upscale(_threshold_image(image)),
+    ]
+    configs = [
+        f"{_ocr_language_config()}--oem 3 --psm 6 -c preserve_interword_spaces=1",
+        f"{_ocr_language_config()}--oem 3 --psm 11",
+    ]
+    texts = []
+    for candidate in images:
+        for config in configs:
             try:
-                box, text_info = item
-                text, confidence = text_info
-            except Exception:
+                texts.append(
+                    pytesseract.image_to_string(
+                        candidate,
+                        config=config,
+                        timeout=get_settings().ocr_fallback_timeout_seconds,
+                    )
+                )
+            except RuntimeError:
                 continue
-
-            cleaned = str(text).strip() if text is not None else ""
-            if not cleaned:
-                continue
-            if confidence is not None and float(confidence) < get_settings().paddleocr_min_confidence:
-                continue
-
-            lines.append(cleaned)
-            metadata.append(_metadata_line(box, cleaned, confidence))
-
-    return _merge_text(["\n".join(lines)]), metadata
+    return _merge_text(texts)
 
 
 def scan_image(path: Path) -> dict:
     raw_text = ""
     barcodes: list[str] = []
-    ocr_lines: list[dict] = []
     ocr_error = ""
 
     try:
         image = ImageOps.exif_transpose(Image.open(path))
-        raw_text, ocr_lines = _ocr_text_from_image(image)
+        raw_text = _ocr_text(image)
         barcodes = _decode_barcodes([image, _enhanced_image(image), _threshold_image(image), *_rotations(image)[1:]])
-    except Exception as exc:  # OCR tooling can fail if binaries or models are missing.
+    except Exception as exc:  # OCR tooling can fail if binaries are missing.
         ocr_error = str(exc)
 
     fields, serial_debug = parse_label_data_with_debug(raw_text, barcodes)
+    if serial_debug.get("needs_confirmation") and raw_text and not ocr_error:
+        try:
+            fallback_text = _ocr_fallback_text(image)
+            raw_text = _merge_text([raw_text, fallback_text])
+            fields, serial_debug = parse_label_data_with_debug(raw_text, barcodes)
+        except Exception as exc:  # Keep the fast OCR result if fallback fails.
+            ocr_error = str(exc)
 
     detected = any(fields.values())
     return {
@@ -165,7 +137,6 @@ def scan_image(path: Path) -> dict:
         "fields": fields,
         "raw_text": raw_text,
         "raw_ocr_text": raw_text,
-        "ocr_lines": ocr_lines,
         "barcodes": barcodes,
         "serial_debug": serial_debug,
         "best_guess_serial": serial_debug.get("best_guess_serial", ""),
