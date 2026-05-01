@@ -43,6 +43,28 @@ class SerialExtractionTests(unittest.TestCase):
             "1278360205091",
         )
 
+    def test_german_ser_nr_label(self) -> None:
+        self.assert_serial(
+            "\n".join(
+                [
+                    "Hersteller: Lenovo",
+                    "Modell: ThinkPad USB-C Dock",
+                    "Ser.-Nr.: PF4ABC123",
+                    "Art.-Nr.: 40AY0090EU",
+                ]
+            ),
+            "PF4ABC123",
+        )
+
+    def test_german_seriennummer_label(self) -> None:
+        self.assert_serial("Serien-Nr. R90X7A2B", "R90X7A2B")
+
+    def test_serial_barcode_is_confident_without_label_text(self) -> None:
+        fields, debug = parse_label_data_with_debug("Logitech MK295", ["2601TVZ1C6D9"])
+
+        self.assertEqual(fields["serial_number"], "2601TVZ1C6D9")
+        self.assertGreaterEqual(debug["confidence"], 0.7)
+
 
 if __name__ == "__main__":
     unittest.main()

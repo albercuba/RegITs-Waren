@@ -11,14 +11,20 @@
     "SERIAL NO",
     "SERIAL NUMBER",
     "SERVICE TAG",
+    "SER NR",
+    "SER-NR",
+    "SERIEN NR",
+    "SERIEN-NR",
     "S-NUMMER",
     "S NUMMER",
-    "SERIENNUMMER"
+    "SERIENNUMMER",
+    "SERIEN NUMMER",
+    "SERIEN-NUMMER"
   ],
   "candidate_patterns": [
     {
       "name": "keyword_serial",
-      "regex": "\\b(?:S[ \\t]*/?[ \\t]*N|SN|SNR|SER(?:IAL)?[ \\t]*(?:NO|NUMBER)?|SERIALNO|SERVICE[ \\t]+TAG|S[ \\t]*-?[ \\t]*NUMMER|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
+      "regex": "\\b(?:S[ \\t]*/?[ \\t]*N|SN|SNR|SERIAL[ \\t]*(?:NO|NUMBER)?|SERIALNO|SERVICE[ \\t]+TAG|SERIEN[ \\t-]*(?:NR|NUMMER)|SER[ \\t-]*(?:NO|NR)|S[ \\t]*-?[ \\t]*NUMMER|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
       "base_score": 100
     },
     {
@@ -41,9 +47,9 @@
       }
     ],
     "HP": [
-    {
-      "name": "hp_serial",
-        "regex": "\\b(?:S[ \\t]*/?[ \\t]*N|SN|SNR|SER(?:IAL)?[ \\t]*(?:NO|NUMBER)?|SERIALNO|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
+      {
+        "name": "hp_serial",
+        "regex": "\\b(?:S[ \\t]*/?[ \\t]*N|SN|SNR|SERIAL[ \\t]*(?:NO|NUMBER)?|SERIALNO|SERIEN[ \\t-]*(?:NR|NUMMER)|SER[ \\t-]*(?:NO|NR)|SERIENNUMMER)[ \\t]*[:#-]?[ \\t]*([A-Z0-9][A-Z0-9 \\t-]{4,28})",
         "base_score": 100
       }
     ],

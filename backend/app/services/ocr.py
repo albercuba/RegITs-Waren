@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
@@ -54,9 +55,22 @@ def _rotations(image: Image.Image) -> list[Image.Image]:
     return [image, image.rotate(90, expand=True), image.rotate(180, expand=True), image.rotate(270, expand=True)]
 
 
+@lru_cache(maxsize=1)
+def _ocr_language_config() -> str:
+    try:
+        languages = set(pytesseract.get_languages(config=""))
+    except Exception:
+        return ""
+    preferred = [language for language in ("deu", "eng") if language in languages]
+    return f"-l {'+'.join(preferred)} " if preferred else ""
+
+
 def _ocr_text(image: Image.Image) -> str:
     enhanced = _enhanced_image(image)
-    return pytesseract.image_to_string(enhanced, config="--oem 3 --psm 6 -c preserve_interword_spaces=1")
+    return pytesseract.image_to_string(
+        enhanced,
+        config=f"{_ocr_language_config()}--oem 3 --psm 6 -c preserve_interword_spaces=1",
+    )
 
 
 def _ocr_fallback_text(image: Image.Image) -> str:
@@ -67,9 +81,9 @@ def _ocr_fallback_text(image: Image.Image) -> str:
     ]
     rotated_images = [_upscale(_enhanced_image(rotated)) for rotated in _rotations(image)[1:]]
     configs = [
-        "--oem 3 --psm 6 -c preserve_interword_spaces=1",
-        "--oem 3 --psm 11",
-        "--oem 3 --psm 12",
+        f"{_ocr_language_config()}--oem 3 --psm 6 -c preserve_interword_spaces=1",
+        f"{_ocr_language_config()}--oem 3 --psm 11",
+        f"{_ocr_language_config()}--oem 3 --psm 12",
     ]
     texts = []
     for candidate in [*images, *rotated_images]:

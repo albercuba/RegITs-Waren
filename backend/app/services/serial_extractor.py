@@ -119,6 +119,10 @@ def _keyword_nearby(text: str, start: int, keywords: list[str]) -> bool:
     return any(keyword in compact_window for keyword in keywords)
 
 
+def _is_direct_serial_source(source: str) -> bool:
+    return source in {"keyword_serial", "hp_serial", "lenovo_serial", "dell_service_tag"} or "serial" in source
+
+
 def _line_for_offset(text: str, offset: int) -> int:
     return text[:offset].count("\n") + 1
 
@@ -228,7 +232,11 @@ def extract_serial(
         clean = _clean_candidate(re.sub(r"\s+", "", barcode))
         if not clean or _looks_like_product_barcode(clean):
             continue
-        candidates[clean] = SerialCandidate(clean, 50, "barcode", None, ["barcode_signal+50"])
+        if not _looks_like_serial(clean):
+            continue
+        score, reasons = _score_candidate(clean, 70, "barcode", None, line_count, False, False, "", vendor_key or vendor)
+        reasons.append("barcode_signal+70")
+        candidates[clean] = SerialCandidate(clean, score, "barcode", None, reasons)
 
     patterns = list(config.get("candidate_patterns", []))
     patterns.extend(config.get("vendor_rules", {}).get(vendor_key, []))
@@ -243,7 +251,7 @@ def extract_serial(
             start = match.start(match.lastindex or 1)
             end = match.end(match.lastindex or 1)
             context = _context_for(normalized_text, start, end)
-            direct_label = source in {"keyword_serial", "hp_serial", "lenovo_serial", "dell_service_tag"}
+            direct_label = _is_direct_serial_source(source)
             _add_candidate(
                 candidates,
                 value,
