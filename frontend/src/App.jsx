@@ -45,7 +45,6 @@ export default function App() {
         </div>
         <div className="topbar-title">IT-Hardware Wareneingang</div>
         <div className="topbar-right">
-          <span className="topbar-count">MVP</span>
           <button
             aria-label={isDark ? "Helles Design aktivieren" : "Dunkles Design aktivieren"}
             className={isDark ? "theme-switch dark" : "theme-switch"}
