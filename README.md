@@ -2,7 +2,7 @@
 
 Mobile-first interne Webanwendung für den IT-Hardware-Wareneingang.
 
-Mitarbeitende können mit dem Smartphone ein Foto des Geräteetiketts aufnehmen. Die Anwendung scannt das Bild automatisch per OCR und Barcode-Erkennung, füllt erkannte Felder vorab aus und sendet eine E-Mail mit Fotoanhang. Alle Einträge werden in SQLite für das Audit-Protokoll gespeichert. SMTP wird im geschützten Admin-Bereich der Weboberfläche konfiguriert.
+Mitarbeitende können mit dem Smartphone ein oder mehrere Fotos von Geräteetiketten aufnehmen. Jedes Foto wird als eigenes Paket behandelt: Die Anwendung scannt das Bild automatisch per OCR und Barcode-Erkennung, füllt erkannte Felder vorab aus und sendet eine E-Mail mit Fotoanhang. Einträge werden in SQLite gespeichert. SMTP und Wareneingang-Standorte werden im geschützten Admin-Bereich der Weboberfläche konfiguriert.
 
 ## Projektstruktur
 
@@ -68,7 +68,7 @@ Hochgeladene Bilder werden im Docker-Volume unter `/app/uploads` gespeichert. Di
 
 Die Ansicht `Admin` öffnen und das `ADMIN_PASSWORD` aus `.env` eingeben.
 
-Im Admin-Bereich können diese Werte gepflegt werden:
+Im Admin-Bereich können die SMTP-Werte gepflegt werden:
 
 - SMTP-Host
 - SMTP-Port
@@ -79,6 +79,16 @@ Im Admin-Bereich können diese Werte gepflegt werden:
 - TLS / STARTTLS
 
 Das Backend prüft die SMTP-Verbindung vor dem Speichern. Das SMTP-Passwort wird mit `APP_SECRET_KEY` verschlüsselt, nie an das Frontend zurückgegeben und nicht protokolliert.
+
+## Admin Standorte
+
+Unterhalb der SMTP-Einstellungen gibt es eine eigene Karte `Standorte`. Dort können mehrere Standorte für den Wareneingang gepflegt und unabhängig von den SMTP-Einstellungen gespeichert werden.
+
+Im Wareneingang erscheint `Standort` als Auswahlliste unter `Angenommen von`. Wenn `Angenommen von` oder `Standort` in einer Session gesetzt wird, übernimmt die App den Wert für alle weiteren Fotos/Pakete derselben Session.
+
+## OCR Debug
+
+Der Admin-Bereich enthält eine OCR-Debug-Ansicht. Mit einer Debug-ID können Raw-OCR-Text, erkannte Kandidaten, Konfidenz und Scoring-Details geprüft werden.
 
 ## Smartphone-Kamera
 
@@ -97,7 +107,18 @@ Das Backend-Image installiert:
 - Tesseract OCR
 - zbar Runtime für `pyzbar`
 
-Das Backend erkennt Seriennummer, Hersteller und Modell per regelbasierter Auswertung. Wenn keine Werte erkannt werden, bleiben die Felder leer und können manuell bearbeitet werden.
+Das Backend erkennt Seriennummer, Hersteller, Modell, Gerätetyp und Notizen per regelbasierter Auswertung. Wenn keine Werte erkannt werden, bleiben die Felder leer und können manuell bearbeitet werden.
+
+Die Seriennummer-Erkennung nutzt eine Kandidaten- und Scoring-Pipeline. Produktbarcodes wie UPC/EAN/GTIN werden nicht als Seriennummer übernommen, außer ein Wert ist klar als Seriennummer markiert.
+
+Bekannte label-spezifische Parser:
+
+- HP USB-C Dock G5
+- iiyama ProLite X2491H
+- Logitech MK295
+- UniFi/Ubiquiti Geräte, z. B. `U7-LR` und `USW-Lite-8-PoE`
+
+Bei UniFi/Ubiquiti-Labels wird der Hersteller als `Ubiquiti` gesetzt, das Modell aus Modellcodes wie `U7-LR` oder `USW-Lite-8-PoE` gelesen, die Seriennummer aus dem Muster `(AK)58D61F517119` / `(RX)847848C64FB6` extrahiert und eine UPC als `UPC: <digits>` in den Notizen gespeichert.
 
 ## API
 
@@ -106,9 +127,13 @@ Wichtige Endpunkte:
 - `POST /api/scan`
 - `POST /api/submissions`
 - `GET /api/submissions`
+- `GET /api/locations`
 - `GET /api/admin/email-settings`
 - `POST /api/admin/email-settings`
 - `POST /api/admin/email-settings/test`
+- `GET /api/admin/locations`
+- `POST /api/admin/locations`
+- `GET /api/admin/scan/debug/{debug_id}`
 
 Admin-Endpunkte erwarten den Header `X-Admin-Password`.
 
