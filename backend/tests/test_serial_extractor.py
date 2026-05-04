@@ -210,6 +210,26 @@ class SerialExtractionTests(unittest.TestCase):
         self.assertEqual(fields["serial_number"], "847848C64FB6")
         self.assertEqual(fields["notes"], "UPC: 810177161929")
 
+    def test_ubiquiti_u7_lr_model_can_come_from_barcode_candidate(self) -> None:
+        fields, debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "(RX)847848C64FB6",
+                    "UPC",
+                    "8 10177 16192 9",
+                    "08/18/25",
+                    "Made in Vietnam",
+                ]
+            ),
+            ["U7-LR", "810177161929"],
+        )
+
+        self.assertEqual(fields["vendor"], "Ubiquiti")
+        self.assertEqual(fields["model"], "U7-LR")
+        self.assertEqual(fields["serial_number"], "847848C64FB6")
+        self.assertEqual(fields["notes"], "UPC: 810177161929")
+        self.assertEqual(debug["confidence"], 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

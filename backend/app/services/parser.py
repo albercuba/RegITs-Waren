@@ -124,10 +124,9 @@ def extract_upc(text: str, barcode_candidates: list[str] | None = None) -> str |
 
 
 def parse_ubiquiti_label(text: str, barcode_candidates: list[str] | None = None) -> dict[str, str] | None:
-    if not is_ubiquiti_label(text):
-        return None
-
     haystack = "\n".join([text, *(barcode_candidates or [])])
+    if not is_ubiquiti_label(haystack):
+        return None
 
     fields = {
         "vendor": "Ubiquiti",
