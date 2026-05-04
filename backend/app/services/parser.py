@@ -42,7 +42,11 @@ UBIQUITI_MODEL_PATTERN = re.compile(
     r"\b((?:U[67]|U7|USW|UAP|UDM|UCG|UXG)-[A-Z0-9]+(?:-[A-Z0-9]+){0,6})\b",
     re.IGNORECASE,
 )
-UBIQUITI_SERIAL_PATTERN = re.compile(r"\(([A-Z]{2})\)\s*([0-9A-Fa-f]{12})\b")
+UBIQUITI_SERIAL_PATTERNS = (
+    re.compile(r"\(([A-Z]{2})\)\s*([0-9A-Fa-f]{12})\b"),
+    re.compile(r"[\(\[\{]\s*[A-Z]{2}\s*[\)\]\}]?\s*([0-9A-Fa-f](?:\s*[0-9A-Fa-f]){11})\b"),
+    re.compile(r"\b[A-Z]{2}\)?\s*([0-9A-Fa-f](?:\s*[0-9A-Fa-f]){11})\b"),
+)
 SPACED_UPC_PATTERN = re.compile(r"\b(\d\s+\d{5}\s+\d{5}\s+\d)\b")
 UPC_PATTERN = re.compile(r"\b(\d{12})\b")
 
@@ -73,8 +77,11 @@ def extract_ubiquiti_model(text: str) -> str | None:
 
 
 def extract_ubiquiti_serial(text: str) -> str | None:
-    match = UBIQUITI_SERIAL_PATTERN.search(text)
-    return match.group(2).upper() if match else None
+    for pattern in UBIQUITI_SERIAL_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            return re.sub(r"\s+", "", match.group(match.lastindex or 1)).upper()
+    return None
 
 
 def _normalize_upc(value: str) -> str:
@@ -103,11 +110,13 @@ def parse_ubiquiti_label(text: str, barcode_candidates: list[str] | None = None)
     if not is_ubiquiti_label(text):
         return None
 
+    haystack = "\n".join([text, *(barcode_candidates or [])])
+
     fields = {
         "vendor": "Ubiquiti",
-        "model": extract_ubiquiti_model(text) or "",
+        "model": extract_ubiquiti_model(haystack) or "",
         "asset_type": "Netzwerkgerät",
-        "serial_number": extract_ubiquiti_serial(text) or "",
+        "serial_number": extract_ubiquiti_serial(haystack) or "",
         "notes": "",
     }
     upc = extract_upc(text, barcode_candidates)
