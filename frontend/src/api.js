@@ -33,8 +33,10 @@ export async function createSubmission(metadata, photos) {
   return parseResponse(response);
 }
 
-export async function getSubmissions() {
-  const response = await fetch(`${API_BASE}/submissions`);
+export async function getSubmissions(adminPassword) {
+  const response = await fetch(`${API_BASE}/submissions`, {
+    headers: { "X-Admin-Password": adminPassword },
+  });
   return parseResponse(response);
 }
 
@@ -93,7 +95,20 @@ export async function testEmailSettings(adminPassword, settings) {
   return parseResponse(response);
 }
 
-export async function getScanDebug(debugId) {
-  const response = await fetch(`${API_BASE}/scan/debug/${debugId}`);
+export async function getScanDebug(debugId, adminPassword) {
+  const response = await fetch(`${API_BASE}/scan/debug/${debugId}`, {
+    headers: { "X-Admin-Password": adminPassword },
+  });
   return parseResponse(response);
+}
+
+export async function getUploadBlob(filename, adminPassword) {
+  const response = await fetch(`${API_BASE}/uploads/${encodeURIComponent(filename)}`, {
+    headers: { "X-Admin-Password": adminPassword },
+  });
+  if (!response.ok) {
+    const data = await response.text();
+    throw new Error(data || "Bild konnte nicht geladen werden");
+  }
+  return response.blob();
 }

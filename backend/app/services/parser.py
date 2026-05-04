@@ -2,7 +2,6 @@ import re
 
 from app.services.serial_extractor import extract_serial
 
-
 VENDORS = ("Dell", "HP", "HPE", "Lenovo", "Apple", "Microsoft", "Cisco", "Ubiquiti", "Samsung", "iiyama", "Logitech")
 
 PRODUCT_BARCODES = {
@@ -34,9 +33,7 @@ PART_CODE_PATTERNS = (
     r"\b(N\d{5,}-\d{3})\b",
 )
 
-MAC_PATTERNS = (
-    r"\bMAC\s*[:#-]?\s*([0-9A-F]{2}(?::[0-9A-F]{2}){5})\b",
-)
+MAC_PATTERNS = (r"\bMAC\s*[:#-]?\s*([0-9A-F]{2}(?::[0-9A-F]{2}){5})\b",)
 
 SERIAL_LABEL_PATTERNS = (
     r"S\s*/\s*N",
@@ -109,12 +106,12 @@ def extract_value_after_label(lines: list[str], label_patterns: tuple[str, ...],
             if not label_match:
                 continue
 
-            tail = line[label_match.end():].strip(" :#.-")
+            tail = line[label_match.end() :].strip(" :#.-")
             tail_match = value_pattern.search(tail)
             if tail_match and not _is_obvious_non_value(tail_match.group(1)):
                 return _format_code(tail_match.group(1))
 
-            for next_line in lines[index + 1:index + 3]:
+            for next_line in lines[index + 1 : index + 3]:
                 if _is_obvious_non_value(next_line):
                     continue
                 next_match = value_pattern.search(next_line.strip(" :#.-"))
@@ -258,7 +255,7 @@ def _normalize_upc(value: str) -> str:
 
 def extract_upc(text: str, barcode_candidates: list[str] | None = None) -> str | None:
     for match in re.finditer(r"\bUPC\b", text, re.IGNORECASE):
-        window = text[match.end():match.end() + 80]
+        window = text[match.end() : match.end() + 80]
         spaced = SPACED_UPC_PATTERN.search(window)
         if spaced:
             return _normalize_upc(spaced.group(1))
@@ -332,9 +329,13 @@ def _detect_asset_type(text: str) -> str:
         return "Monitor"
     if re.search(r"\biiyama\b", text, re.IGNORECASE) and re.search(r"\bX\d{4}[A-Z-]*\b", text, re.IGNORECASE):
         return "Monitor"
-    if re.search(r"\bMK\d{3,4}\b", text, re.IGNORECASE) or _contains_any(text, ("keyboard", "mouse", "tastatur", "maus")):
+    if re.search(r"\bMK\d{3,4}\b", text, re.IGNORECASE) or _contains_any(
+        text, ("keyboard", "mouse", "tastatur", "maus")
+    ):
         return "Tastatur/Maus-Set"
-    if re.search(r"\bHSN-[A-Z0-9-]{3,}\b", text, re.IGNORECASE) or _contains_any(text, ("dock", "docking", "port replicator")):
+    if re.search(r"\bHSN-[A-Z0-9-]{3,}\b", text, re.IGNORECASE) or _contains_any(
+        text, ("dock", "docking", "port replicator")
+    ):
         return "Dockingstation"
     return ""
 
@@ -429,20 +430,33 @@ def parse_label_data_with_debug(text: str, barcodes: list[str] | None = None) ->
     asset_type = _detect_asset_type(clean_text)
     notes = _build_notes(clean_text)
 
-    resolved_vendor = ubiquiti_fields.get("vendor", "") or labeled_fields.get("vendor", "") or vendor or str(product.get("vendor", ""))
+    resolved_vendor = (
+        ubiquiti_fields.get("vendor", "")
+        or labeled_fields.get("vendor", "")
+        or vendor
+        or str(product.get("vendor", ""))
+    )
     serial_debug = (
         _ubiquiti_serial_debug(ubiquiti_fields.get("serial_number", ""))
         if ubiquiti_fields
-        else _generic_serial_debug(labeled_fields["serial_number"])
-        if labeled_fields.get("serial_number")
-        else extract_serial(text, barcodes, resolved_vendor)
+        else (
+            _generic_serial_debug(labeled_fields["serial_number"])
+            if labeled_fields.get("serial_number")
+            else extract_serial(text, barcodes, resolved_vendor)
+        )
     )
 
     return {
         "serial_number": serial_debug["best_guess_serial"],
         "vendor": resolved_vendor,
-        "model": ubiquiti_fields.get("model", "") or labeled_fields.get("model", "") or str(product.get("model", "")) or model,
-        "asset_type": ubiquiti_fields.get("asset_type", "") or labeled_fields.get("asset_type", "") or asset_type or str(product.get("asset_type", "")),
+        "model": ubiquiti_fields.get("model", "")
+        or labeled_fields.get("model", "")
+        or str(product.get("model", ""))
+        or model,
+        "asset_type": ubiquiti_fields.get("asset_type", "")
+        or labeled_fields.get("asset_type", "")
+        or asset_type
+        or str(product.get("asset_type", "")),
         "notes": _merge_notes(
             ubiquiti_fields.get("notes", ""),
             labeled_fields.get("notes", ""),

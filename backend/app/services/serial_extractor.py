@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "serial_patterns.json"
 NOISE_PATTERN = re.compile(r"[^A-Z0-9:/\-\s]")
 
@@ -101,7 +100,7 @@ def _looks_like_ubiquiti_model(value: str) -> bool:
 
 
 def _context_for(text: str, start: int, end: int) -> str:
-    return text[max(0, start - 32):min(len(text), end + 32)]
+    return text[max(0, start - 32) : min(len(text), end + 32)]
 
 
 def _bad_context(context: str) -> str:
@@ -119,7 +118,7 @@ def _bad_context(context: str) -> str:
 
 
 def _keyword_nearby(text: str, start: int, keywords: list[str]) -> bool:
-    window = text[max(0, start - 24):start + 8]
+    window = text[max(0, start - 24) : start + 8]
     compact_window = re.sub(r"\s+", " ", window)
     return any(keyword in compact_window for keyword in keywords)
 
@@ -221,7 +220,9 @@ def _add_candidate(
     if not _looks_like_serial(clean, allow_product_barcode_shape):
         return
 
-    score, reasons = _score_candidate(clean, base_score, source, line, line_count, has_keyword, direct_label, bad_context, vendor)
+    score, reasons = _score_candidate(
+        clean, base_score, source, line, line_count, has_keyword, direct_label, bad_context, vendor
+    )
     existing = candidates.get(clean)
     if not existing or score > existing.score:
         candidates[clean] = SerialCandidate(clean, score, source, line, reasons)
@@ -245,7 +246,9 @@ def extract_serial(
             continue
         if not _looks_like_serial(clean):
             continue
-        score, reasons = _score_candidate(clean, 70, "barcode", None, line_count, False, False, "", vendor_key or vendor)
+        score, reasons = _score_candidate(
+            clean, 70, "barcode", None, line_count, False, False, "", vendor_key or vendor
+        )
         reasons.append("barcode_signal+70")
         candidates[clean] = SerialCandidate(clean, score, "barcode", None, reasons)
 

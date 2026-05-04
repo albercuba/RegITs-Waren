@@ -1,40 +1,5 @@
 import unittest
-import sys
-import types
 from unittest.mock import Mock, patch
-
-if "pydantic_settings" not in sys.modules:
-    pydantic_settings = types.ModuleType("pydantic_settings")
-
-    class BaseSettings:
-        pass
-
-    def SettingsConfigDict(**kwargs):
-        return kwargs
-
-    pydantic_settings.BaseSettings = BaseSettings
-    pydantic_settings.SettingsConfigDict = SettingsConfigDict
-    sys.modules["pydantic_settings"] = pydantic_settings
-
-if "pydantic" not in sys.modules:
-    pydantic = types.ModuleType("pydantic")
-
-    class BaseModel:
-        pass
-
-    def Field(*args, **kwargs):
-        if "default_factory" in kwargs:
-            return kwargs["default_factory"]()
-        return args[0] if args else kwargs.get("default", None)
-
-    pydantic.BaseModel = BaseModel
-    pydantic.EmailStr = str
-    pydantic.Field = Field
-    sys.modules["pydantic"] = pydantic
-
-security = types.ModuleType("app.services.security")
-security.decrypt_secret = lambda value: value or ""
-sys.modules["app.services.security"] = security
 
 from app.services.email import SmtpSettings, validate_smtp
 
@@ -57,9 +22,10 @@ class SmtpConnectionTests(unittest.TestCase):
         smtp.__enter__ = Mock(return_value=smtp)
         smtp.__exit__ = Mock(return_value=None)
 
-        with patch("app.services.email.smtplib.SMTP_SSL", return_value=smtp) as smtp_ssl, patch(
-            "app.services.email.smtplib.SMTP"
-        ) as smtp_plain:
+        with (
+            patch("app.services.email.smtplib.SMTP_SSL", return_value=smtp) as smtp_ssl,
+            patch("app.services.email.smtplib.SMTP") as smtp_plain,
+        ):
             validate_smtp(smtp_settings(465))
 
         smtp_ssl.assert_called_once_with("smtp.example.test", 465, timeout=15)
@@ -72,9 +38,10 @@ class SmtpConnectionTests(unittest.TestCase):
         smtp.__enter__ = Mock(return_value=smtp)
         smtp.__exit__ = Mock(return_value=None)
 
-        with patch("app.services.email.smtplib.SMTP", return_value=smtp) as smtp_plain, patch(
-            "app.services.email.smtplib.SMTP_SSL"
-        ) as smtp_ssl:
+        with (
+            patch("app.services.email.smtplib.SMTP", return_value=smtp) as smtp_plain,
+            patch("app.services.email.smtplib.SMTP_SSL") as smtp_ssl,
+        ):
             validate_smtp(smtp_settings(587))
 
         smtp_plain.assert_called_once_with("smtp.example.test", 587, timeout=15)

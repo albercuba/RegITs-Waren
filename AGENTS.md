@@ -23,7 +23,7 @@ The most important extracted field is the serial number. Scan behavior should fa
 - Backend: FastAPI, SQLite, Pillow, Tesseract OCR, pyzbar.
 - Frontend: React.
 - Runtime: Docker Compose.
-- Tests: Python `unittest`.
+- Tests: Python `pytest` and parser-focused `unittest` tests.
 
 ## Coding Rules
 
@@ -40,12 +40,21 @@ For backend OCR/parser changes, run:
 
 ```sh
 cd backend
-python -m unittest discover -s tests
+pytest
+ruff check .
+black --check .
 ```
 
 Run the training helper as an additional check when label training examples are changed.
 
-For frontend changes, inspect `frontend/package.json` and use the existing npm scripts.
+For frontend changes, run:
+
+```sh
+cd frontend
+npm ci
+npm run lint
+npm run build
+```
 
 ## Commit Messages
 

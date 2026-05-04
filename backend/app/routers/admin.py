@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
 import json
 import smtplib
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -66,7 +66,7 @@ def _load_locations() -> list[str]:
 
 def _save_locations(locations: list[str]) -> list[str]:
     cleaned = _clean_locations(locations)
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
     with get_db() as conn:
         conn.execute(
             """
@@ -104,19 +104,23 @@ def save_email_settings(payload: EmailSettingsIn) -> EmailSettingsOut:
         existing = conn.execute("SELECT * FROM email_settings WHERE id = 1").fetchone()
 
     settings = settings_from_payload(payload)
-    existing_password = decrypt_secret(existing["smtp_password_encrypted"]) if existing and not payload.smtp_password else ""
+    existing_password = (
+        decrypt_secret(existing["smtp_password_encrypted"]) if existing and not payload.smtp_password else ""
+    )
     if existing_password:
         settings.smtp_password = existing_password
 
     try:
         validate_smtp(settings)
     except smtplib.SMTPAuthenticationError as exc:
-        raise HTTPException(status_code=400, detail=_smtp_error_detail("Authentifizierung fehlgeschlagen", exc)) from exc
+        raise HTTPException(
+            status_code=400, detail=_smtp_error_detail("Authentifizierung fehlgeschlagen", exc)
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=_smtp_error_detail("SMTP-Verbindung fehlgeschlagen", exc)) from exc
 
     encrypted_password = encrypt_secret(payload.smtp_password or existing_password)
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
     with get_db() as conn:
         conn.execute(
             """
@@ -162,7 +166,9 @@ def test_email_settings(payload: EmailSettingsIn) -> dict[str, str]:
     try:
         send_test_email(settings)
     except smtplib.SMTPAuthenticationError as exc:
-        raise HTTPException(status_code=400, detail=_smtp_error_detail("Authentifizierung fehlgeschlagen", exc)) from exc
+        raise HTTPException(
+            status_code=400, detail=_smtp_error_detail("Authentifizierung fehlgeschlagen", exc)
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=_smtp_error_detail("SMTP-Verbindung fehlgeschlagen", exc)) from exc
     return {"message": "Test-E-Mail gesendet"}

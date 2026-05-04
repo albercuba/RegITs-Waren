@@ -4,6 +4,7 @@ import {
   getAdminLocations,
   getEmailSettings,
   getScanDebug,
+  getUploadBlob,
   saveEmailSettings,
   saveLocations,
   testEmailSettings,
@@ -63,6 +64,7 @@ export default function AdminPage() {
   const [locations, setLocations] = useState([]);
   const [debugId, setDebugId] = useState("");
   const [debugData, setDebugData] = useState(null);
+  const [debugImageUrl, setDebugImageUrl] = useState("");
 
   async function unlock() {
     setBusy(true);
@@ -149,8 +151,18 @@ export default function AdminPage() {
     if (!debugId) return;
     setBusy(true);
     setStatus(null);
+    setDebugData(null);
+    if (debugImageUrl) {
+      URL.revokeObjectURL(debugImageUrl);
+      setDebugImageUrl("");
+    }
     try {
-      setDebugData(await getScanDebug(debugId));
+      const data = await getScanDebug(debugId, adminPassword);
+      setDebugData(data);
+      if (data.image_file) {
+        const imageBlob = await getUploadBlob(data.image_file, adminPassword);
+        setDebugImageUrl(URL.createObjectURL(imageBlob));
+      }
     } catch (error) {
       setStatus({ type: "error", message: germanError(error.message) });
     } finally {
@@ -240,7 +252,7 @@ export default function AdminPage() {
             </button>
             {debugData && (
               <div className="debug-view">
-                {debugData.image_url && <img alt="" src={debugData.image_url} />}
+                {debugImageUrl && <img alt="" src={debugImageUrl} />}
                 <div className="debug-grid">
                   <strong>Seriennummer</strong>
                   <span>{debugData.best_guess_serial || "Nicht erkannt"}</span>

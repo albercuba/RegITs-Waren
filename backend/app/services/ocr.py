@@ -1,9 +1,9 @@
 from functools import lru_cache
 from pathlib import Path
 
+import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 from pyzbar.pyzbar import decode
-import pytesseract
 
 from app.config import get_settings
 from app.services.parser import parse_label_data_with_debug

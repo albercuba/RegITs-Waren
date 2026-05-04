@@ -3,7 +3,6 @@ from pathlib import Path
 
 from app.services.parser import parse_label_data_with_debug
 
-
 TRAINING_PATH = Path(__file__).resolve().parents[1] / "label_training_examples.json"
 
 

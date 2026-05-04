@@ -1,8 +1,8 @@
 # RegITs-Waren
 
-Mobile-first interne Webanwendung für den IT-Hardware-Wareneingang.
+Mobile-first interne Webanwendung fuer den IT-Hardware-Wareneingang.
 
-Mitarbeitende können mit dem Smartphone ein oder mehrere Fotos von Geräteetiketten aufnehmen. Jedes Foto wird als eigenes Paket behandelt: Die Anwendung scannt das Bild automatisch per OCR und Barcode-Erkennung, füllt erkannte Felder vorab aus und sendet eine E-Mail mit Fotoanhang. Einträge werden in SQLite gespeichert. SMTP und Wareneingang-Standorte werden im geschützten Admin-Bereich der Weboberfläche konfiguriert.
+Mitarbeitende koennen mit dem Smartphone ein oder mehrere Fotos von Geraeteetiketten aufnehmen. Jedes Foto wird als eigenes Paket behandelt: OCR und Barcode-Erkennung fuellen erkannte Felder vorab aus, der Eintrag wird in SQLite gespeichert und per E-Mail mit Fotoanhang versendet. SMTP und Wareneingang-Standorte werden im geschuetzten Admin-Bereich konfiguriert.
 
 ## Projektstruktur
 
@@ -12,30 +12,43 @@ backend/
     main.py
     database.py
     routers/
-      intake.py
-      admin.py
     services/
-      ocr.py
-      parser.py
-      email.py
-      security.py
     models/
-      schemas.py
+  tests/
 frontend/
   src/
-    pages/
-      IntakePage.jsx
-      AdminPage.jsx
-    components/
-      PhotoCapture.jsx
-      FormFields.jsx
-      SendButton.jsx
-      SettingsForm.jsx
 docker-compose.yml
 .env.example
 ```
 
-## Start mit Docker
+## Lokale Entwicklung
+
+Backend:
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install -r requirements-dev.txt
+set DATABASE_PATH=./data/regits-dev.db
+set UPLOAD_DIR=./uploads
+uvicorn app.main:app --reload
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Standard-URLs:
+
+- Frontend dev: `http://localhost:5173`
+- Backend API: `http://localhost:8000/api/health`
+
+## Docker
 
 1. Umgebungsdatei erstellen:
 
@@ -43,104 +56,167 @@ docker-compose.yml
 cp .env.example .env
 ```
 
-2. `.env` bearbeiten und mindestens diese Werte setzen:
+2. `.env` bearbeiten:
 
 ```env
-APP_SECRET_KEY=dein-langer-zufälliger-schlüssel
+APP_SECRET_KEY=dein-langer-zufaelliger-schluessel
 ADMIN_PASSWORD=dein-admin-passwort
+MAX_UPLOAD_MB=12
+CORS_ORIGINS=http://localhost:8081
 ```
 
-3. Anwendung starten:
+3. Starten:
 
 ```bash
 docker compose up --build
 ```
 
-4. Im Browser öffnen:
+4. Oeffnen:
 
 ```text
 http://localhost:8081
 ```
 
-Hochgeladene Bilder werden im Docker-Volume unter `/app/uploads` gespeichert. Die SQLite-Datenbank liegt im `data` Docker-Volume.
+Docker Compose nutzt Volumes fuer `/app/data` und `/app/uploads`. Die Container laufen mit nicht-root Benutzern, Healthchecks sind fuer Backend und Frontend konfiguriert.
 
-## Admin SMTP-Einstellungen
+## Admin
 
-Die Ansicht `Admin` öffnen und das `ADMIN_PASSWORD` aus `.env` eingeben.
+Die Ansicht `Admin` mit `ADMIN_PASSWORD` entsperren.
 
-Im Admin-Bereich können die SMTP-Werte gepflegt werden:
+SMTP-Einstellungen:
 
-- SMTP-Host
-- SMTP-Port
-- SMTP-Benutzername
-- SMTP-Passwort
-- Absenderadresse
-- Empfängeradresse
-- TLS / STARTTLS
+- SMTP-Host, Port, Benutzername, Passwort
+- Absenderadresse und Empfaengeradresse
+- TLS/STARTTLS
 
-Das Backend prüft die SMTP-Verbindung vor dem Speichern. Das SMTP-Passwort wird mit `APP_SECRET_KEY` verschlüsselt, nie an das Frontend zurückgegeben und nicht protokolliert.
+Das Backend prueft die SMTP-Verbindung vor dem Speichern. Das SMTP-Passwort wird mit `APP_SECRET_KEY` verschluesselt und nie an das Frontend zurueckgegeben.
 
-## Admin Standorte
+Standorte:
 
-Unterhalb der SMTP-Einstellungen gibt es eine eigene Karte `Standorte`. Dort können mehrere Standorte für den Wareneingang gepflegt und unabhängig von den SMTP-Einstellungen gespeichert werden.
+- Eigene Karte `Standorte` unterhalb der SMTP-Einstellungen
+- Mehrere Standorte koennen unabhaengig von SMTP gespeichert werden
+- `Standort` und `Angenommen von` werden innerhalb einer Aufnahme-Session auf weitere Fotos uebernommen
 
-Im Wareneingang erscheint `Standort` als Auswahlliste unter `Angenommen von`. Wenn `Angenommen von` oder `Standort` in einer Session gesetzt wird, übernimmt die App den Wert für alle weiteren Fotos/Pakete derselben Session.
+OCR Debug:
 
-## OCR Debug
-
-Der Admin-Bereich enthält eine OCR-Debug-Ansicht. Mit einer Debug-ID können Raw-OCR-Text, erkannte Kandidaten, Konfidenz und Scoring-Details geprüft werden.
-
-## Smartphone-Kamera
-
-Die Anwendung nutzt:
-
-```html
-<input type="file" accept="image/*" capture="environment" />
-```
-
-Viele mobile Browser erlauben den besten Kamerazugriff nur über HTTPS, außer bei `localhost`. Fuer produktive Nutzung oder Tests im LAN sollte die Anwendung hinter einem HTTPS-Reverse-Proxy laufen.
+- Debugdaten und gespeicherte Upload-Bilder sind admin-geschuetzt
+- Der Admin-Bereich laedt Preview-Bilder mit dem Header `X-Admin-Password`
 
 ## OCR und Barcode
 
-Das Backend-Image installiert:
+Das Backend-Image installiert Tesseract OCR und zbar. Seriennummern werden mit label-aware Parsern und einer Kandidaten/Scoring-Pipeline erkannt.
 
-- Tesseract OCR
-- zbar Runtime für `pyzbar`
+Wichtige Regeln:
 
-Das Backend erkennt Seriennummer, Hersteller, Modell, Gerätetyp und Notizen per regelbasierter Auswertung. Wenn keine Werte erkannt werden, bleiben die Felder leer und können manuell bearbeitet werden.
-
-Die Seriennummer-Erkennung nutzt eine Kandidaten- und Scoring-Pipeline. Produktbarcodes wie UPC/EAN/GTIN werden nicht als Seriennummer übernommen, außer ein Wert ist klar als Seriennummer markiert.
-
-Bekannte label-spezifische Parser:
-
-- HP USB-C Dock G5
-- iiyama ProLite X2491H
-- Logitech MK295
-- UniFi/Ubiquiti Geräte, z. B. `U7-LR` und `USW-Lite-8-PoE`
-
-Bei UniFi/Ubiquiti-Labels wird der Hersteller als `Ubiquiti` gesetzt, das Modell aus Modellcodes wie `U7-LR` oder `USW-Lite-8-PoE` gelesen, die Seriennummer aus dem Muster `(AK)58D61F517119` / `(RX)847848C64FB6` extrahiert und eine UPC als `UPC: <digits>` in den Notizen gespeichert.
+- Explizite Labels wie `S/N`, `Serial`, `Seriennummer` gewinnen gegen generische Kandidaten
+- UPC/EAN/GTIN werden nicht als Seriennummer uebernommen, wenn eine echte Seriennummer vorhanden ist
+- UniFi/Ubiquiti Labels setzen `Hersteller = Ubiquiti`, Modellcodes wie `U7-LR` oder `USW-Lite-8-PoE`, Seriennummern aus `(AK)58D61F517119` / `(RX)847848C64FB6` und UPC in `Notizen`
+- Generische Labels mit `Part Code`, `P/N`, `Model No.` und aehnlichen Feldern werden bevorzugt vor Fallback-Heuristiken ausgewertet
 
 ## API
 
 Wichtige Endpunkte:
 
+- `GET /api/health`
 - `POST /api/scan`
 - `POST /api/submissions`
-- `GET /api/submissions`
 - `GET /api/locations`
 - `GET /api/admin/email-settings`
 - `POST /api/admin/email-settings`
 - `POST /api/admin/email-settings/test`
 - `GET /api/admin/locations`
 - `POST /api/admin/locations`
-- `GET /api/admin/scan/debug/{debug_id}`
+- `GET /api/scan/debug/{debug_id}` mit `X-Admin-Password`
+- `GET /api/uploads/{filename}` mit `X-Admin-Password`
 
-Admin-Endpunkte erwarten den Header `X-Admin-Password`.
+## Sicherheit und Produktion
 
-## Sicherheit
+Produktions-Checkliste:
 
-- Uploads werden auf Bilddateien begrenzt.
-- Die Upload-Größe ist über `MAX_UPLOAD_MB` begrenzt, Standardwert `12`.
-- Das SMTP-Passwort wird verschlüsselt gespeichert.
-- Admin-Einstellungen erfordern `ADMIN_PASSWORD`.
-- Fuer produktive Nutzung HTTPS verwenden.
+- `ADMIN_PASSWORD` aendern
+- `APP_SECRET_KEY` auf einen langen, zufaelligen Wert setzen und danach nicht verlieren
+- `CORS_ORIGINS` auf die echte Frontend-Origin setzen, z. B. `https://waren.example.de`
+- Hinter einem HTTPS-Reverse-Proxy betreiben
+- Volumes und Backups schuetzen
+- Netzwerkzugriff einschraenken, wenn die App nur im LAN genutzt werden soll
+- `.env` nicht committen
+
+Uploads:
+
+- Uploadgroesse wird mit `MAX_UPLOAD_MB` begrenzt
+- Dateien muessen echte, von Pillow lesbare Bilder sein
+- Gespeicherte Dateinamen werden serverseitig generiert
+- Bilder werden beim Speichern neu geschrieben, um unnoetige Metadaten wie EXIF zu vermeiden
+
+CORS:
+
+`CORS_ORIGINS` ist kommasepariert. Standard fuer lokale Entwicklung:
+
+```text
+http://localhost:8081,http://localhost:5173,http://127.0.0.1:5173
+```
+
+## Backup und Restore
+
+Backup der Docker-Volumes:
+
+```bash
+docker compose stop
+docker run --rm -v regits-waren_data:/data -v %cd%:/backup alpine tar czf /backup/regits-data.tgz -C /data .
+docker run --rm -v regits-waren_uploads:/uploads -v %cd%:/backup alpine tar czf /backup/regits-uploads.tgz -C /uploads .
+docker compose start
+```
+
+Restore:
+
+```bash
+docker compose stop
+docker run --rm -v regits-waren_data:/data -v %cd%:/backup alpine sh -c "rm -rf /data/* && tar xzf /backup/regits-data.tgz -C /data"
+docker run --rm -v regits-waren_uploads:/uploads -v %cd%:/backup alpine sh -c "rm -rf /uploads/* && tar xzf /backup/regits-uploads.tgz -C /uploads"
+docker compose up -d
+```
+
+Bei anderen Compose-Projektnamen koennen die Volume-Namen abweichen. Mit `docker volume ls` pruefen.
+
+## Tests und Checks
+
+Backend:
+
+```bash
+cd backend
+pytest
+ruff check .
+black --check .
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm ci
+npm run lint
+npm run build
+```
+
+Docker:
+
+```bash
+docker compose config
+```
+
+## Troubleshooting
+
+- Tesseract/OCR: Sicherstellen, dass `tesseract-ocr`, `tesseract-ocr-deu` und `tesseract-ocr-eng` installiert sind.
+- Barcode/zbar: `pyzbar` benoetigt die zbar Runtime (`libzbar0` im Dockerfile).
+- SMTP: Port 465 nutzt implizites TLS, Port 587 typischerweise STARTTLS. Fehlermeldungen aus dem SMTP-Test werden im Admin-Bereich angezeigt.
+- HTTPS/Kamera: Mobile Browser erlauben Kamera-Uploads am zuverlaessigsten ueber HTTPS oder `localhost`.
+- CORS/Admin: Die Browser-Origin muss in `CORS_ORIGINS` stehen. Admin-Endpunkte erwarten `X-Admin-Password`.
+
+## Screenshots / Workflow
+
+Platzhalter:
+
+- Wareneingang mit mehreren Foto-Karten
+- Admin SMTP-Einstellungen
+- Admin Standorte
+- OCR Debug Ansicht

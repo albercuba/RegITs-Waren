@@ -1,7 +1,7 @@
 import smtplib
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -44,7 +44,7 @@ def _german_datetime(value: str) -> str:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return value
-    return parsed.astimezone(timezone.utc).strftime("%d.%m.%Y, %H:%M Uhr")
+    return parsed.astimezone(UTC).strftime("%d.%m.%Y, %H:%M Uhr")
 
 
 @contextmanager
@@ -114,7 +114,9 @@ def send_intake_email(metadata: IntakeMetadata, image_paths: list[Path], created
     message.set_content(body)
     for image_path in image_paths:
         data = image_path.read_bytes()
-        message.add_attachment(data, maintype="image", subtype=image_path.suffix.lstrip(".") or "jpeg", filename=image_path.name)
+        message.add_attachment(
+            data, maintype="image", subtype=image_path.suffix.lstrip(".") or "jpeg", filename=image_path.name
+        )
     _send_message(settings, message)
 
 
@@ -124,4 +126,4 @@ def _send_message(settings: SmtpSettings, message: EmailMessage) -> None:
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")

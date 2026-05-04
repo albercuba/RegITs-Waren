@@ -1,15 +1,18 @@
 import json
 import uuid
+from io import BytesIO
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.config import get_settings
 from app.database import get_db, utc_timestamp
 from app.models.schemas import IntakeMetadata
 from app.services.email import send_intake_email, utc_now
 from app.services.ocr import scan_image
+from app.services.security import require_admin
 
 router = APIRouter(prefix="/api", tags=["intake"])
 
@@ -20,9 +23,13 @@ def _upload_dir() -> Path:
     return path
 
 
-def _extension(filename: str) -> str:
-    suffix = Path(filename).suffix.lower()
-    return suffix if suffix in {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"} else ".jpg"
+IMAGE_FORMAT_EXTENSIONS = {
+    "JPEG": ".jpg",
+    "PNG": ".png",
+    "WEBP": ".webp",
+    "BMP": ".bmp",
+    "GIF": ".gif",
+}
 
 
 def _validate_image(upload: UploadFile) -> None:
@@ -30,19 +37,43 @@ def _validate_image(upload: UploadFile) -> None:
         raise HTTPException(status_code=400, detail="Nur Bilddateien sind erlaubt")
 
 
+def _read_upload_bytes(upload: UploadFile) -> bytes:
+    limit = get_settings().max_upload_mb * 1024 * 1024
+    data = upload.file.read(limit + 1)
+    if len(data) > limit:
+        raise HTTPException(status_code=413, detail=f"Bild überschreitet {get_settings().max_upload_mb} MB Limit")
+    return data
+
+
+def _load_verified_image(data: bytes) -> Image.Image:
+    try:
+        with Image.open(BytesIO(data)) as image:
+            image.verify()
+        image = Image.open(BytesIO(data))
+        if image.format not in IMAGE_FORMAT_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Nicht unterstütztes Bildformat")
+        return ImageOps.exif_transpose(image)
+    except (UnidentifiedImageError, OSError) as exc:
+        raise HTTPException(status_code=400, detail="Ungültige Bilddatei") from exc
+
+
+def _store_sanitized_image(image: Image.Image, target: Path) -> None:
+    if image.format == "JPEG" and image.mode not in {"RGB", "L"}:
+        image = image.convert("RGB")
+    save_kwargs = {"format": image.format}
+    image.save(target, **save_kwargs)
+
+
 def _save_upload(upload: UploadFile, prefix: str) -> Path:
     _validate_image(upload)
-    limit = get_settings().max_upload_mb * 1024 * 1024
-    target = _upload_dir() / f"{prefix}-{uuid.uuid4().hex}{_extension(upload.filename or '')}"
-    size = 0
-    with target.open("wb") as output:
-        while chunk := upload.file.read(1024 * 1024):
-            size += len(chunk)
-            if size > limit:
-                output.close()
-                target.unlink(missing_ok=True)
-                raise HTTPException(status_code=413, detail=f"Bild überschreitet {get_settings().max_upload_mb} MB Limit")
-            output.write(chunk)
+    image = _load_verified_image(_read_upload_bytes(upload))
+    suffix = IMAGE_FORMAT_EXTENSIONS.get(image.format, ".jpg")
+    target = _upload_dir() / f"{prefix}-{uuid.uuid4().hex}{suffix}"
+    try:
+        _store_sanitized_image(image, target)
+    except OSError as exc:
+        target.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Bild konnte nicht gespeichert werden") from exc
     return target
 
 
@@ -91,7 +122,7 @@ def scan_label(photo: UploadFile = File(...)) -> dict:
     return result
 
 
-@router.post("/scan/debug")
+@router.post("/scan/debug", dependencies=[Depends(require_admin)])
 def scan_label_debug(photo: UploadFile = File(...)) -> dict:
     path = _save_upload(photo, "scan-debug")
     result = scan_image(path)
@@ -99,7 +130,7 @@ def scan_label_debug(photo: UploadFile = File(...)) -> dict:
     return result
 
 
-@router.get("/scan/debug/{debug_id}")
+@router.get("/scan/debug/{debug_id}", dependencies=[Depends(require_admin)])
 def get_scan_debug(debug_id: int) -> dict:
     with get_db() as conn:
         row = conn.execute("SELECT * FROM scan_debug WHERE id = ?", (debug_id,)).fetchone()
@@ -166,12 +197,14 @@ def create_submission(metadata: str = Form(...), photos: list[UploadFile] = File
     try:
         send_intake_email(payload, image_paths, created_at)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Eintrag gespeichert, aber E-Mail-Versand fehlgeschlagen: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Eintrag gespeichert, aber E-Mail-Versand fehlgeschlagen: {exc}"
+        ) from exc
 
     return {"id": submission_id, "created_at": created_at, "image_paths": [path.name for path in image_paths]}
 
 
-@router.get("/submissions")
+@router.get("/submissions", dependencies=[Depends(require_admin)])
 def list_submissions(limit: int = Query(default=20, ge=1, le=100)) -> list[dict]:
     with get_db() as conn:
         rows = conn.execute(
@@ -181,10 +214,10 @@ def list_submissions(limit: int = Query(default=20, ge=1, le=100)) -> list[dict]
     return [dict(row) | {"image_file": Path(row["image_path"]).name} for row in rows]
 
 
-@router.get("/uploads/{filename}")
+@router.get("/uploads/{filename}", dependencies=[Depends(require_admin)])
 def get_upload(filename: str) -> FileResponse:
     path = (_upload_dir() / Path(filename).name).resolve()
     upload_root = _upload_dir().resolve()
-    if upload_root not in path.parents or not path.exists():
+    if path.parent != upload_root or not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="Datei nicht gefunden")
     return FileResponse(path)
