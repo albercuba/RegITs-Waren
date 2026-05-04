@@ -42,11 +42,7 @@ UBIQUITI_MODEL_PATTERN = re.compile(
     r"\b((?:U[67]|U7|USW|UAP|UDM|UCG|UXG)-[A-Z0-9]+(?:-[A-Z0-9]+){0,6})\b",
     re.IGNORECASE,
 )
-UBIQUITI_SERIAL_PATTERNS = (
-    re.compile(r"\(([A-Z]{2})\)\s*([0-9A-Fa-f]{12})\b"),
-    re.compile(r"[\(\[\{]\s*[A-Z]{2}\s*[\)\]\}]?\s*([0-9A-Fa-f](?:\s*[0-9A-Fa-f]){11})\b"),
-    re.compile(r"\b[A-Z]{2}\)?\s*([0-9A-Fa-f](?:\s*[0-9A-Fa-f]){11})\b"),
-)
+UBIQUITI_SERIAL_PATTERN = re.compile(r"\(([A-Z]{2})\)\s*([0-9A-Fa-f]{12})\b")
 SPACED_UPC_PATTERN = re.compile(r"\b(\d\s+\d{5}\s+\d{5}\s+\d)\b")
 UPC_PATTERN = re.compile(r"\b(\d{12})\b")
 
@@ -77,11 +73,8 @@ def extract_ubiquiti_model(text: str) -> str | None:
 
 
 def extract_ubiquiti_serial(text: str) -> str | None:
-    for pattern in UBIQUITI_SERIAL_PATTERNS:
-        match = pattern.search(text)
-        if match:
-            return re.sub(r"\s+", "", match.group(match.lastindex or 1)).upper()
-    return None
+    match = UBIQUITI_SERIAL_PATTERN.search(text)
+    return match.group(2).upper() if match else None
 
 
 def _normalize_upc(value: str) -> str:
@@ -123,6 +116,41 @@ def parse_ubiquiti_label(text: str, barcode_candidates: list[str] | None = None)
     if upc:
         fields["notes"] = f"UPC: {upc}"
     return fields
+
+
+def _ubiquiti_serial_debug(serial_number: str) -> dict:
+    if not serial_number:
+        return {
+            "best_guess_serial": "",
+            "confidence_score": 0,
+            "confidence": 0,
+            "confidence_threshold": 70,
+            "needs_confirmation": True,
+            "candidates": [],
+            "normalized_text": "",
+            "warnings": ["UniFi serial number needs manual confirmation"],
+        }
+
+    return {
+        "best_guess_serial": serial_number,
+        "confidence_score": 100,
+        "confidence": 1.0,
+        "confidence_threshold": 70,
+        "needs_confirmation": False,
+        "candidates": [
+            {
+                "value": serial_number,
+                "score": 100,
+                "source": "ubiquiti_identifier",
+                "line": None,
+                "reasons": ["ubiquiti_parenthesized_identifier+100"],
+                "reason": "ubiquiti_parenthesized_identifier+100",
+                "rejected": False,
+            }
+        ],
+        "normalized_text": "",
+        "warnings": [],
+    }
 
 
 def _detect_asset_type(text: str) -> str:
@@ -227,29 +255,11 @@ def parse_label_data_with_debug(text: str, barcodes: list[str] | None = None) ->
     notes = _build_notes(clean_text)
 
     resolved_vendor = ubiquiti_fields.get("vendor", "") or vendor or str(product.get("vendor", ""))
-    serial_debug = extract_serial(text, barcodes, resolved_vendor)
-    if ubiquiti_fields.get("serial_number"):
-        serial_value = ubiquiti_fields["serial_number"]
-        serial_debug = {
-            **serial_debug,
-            "best_guess_serial": serial_value,
-            "confidence_score": 100,
-            "confidence": 1.0,
-            "needs_confirmation": False,
-            "warnings": [],
-            "candidates": [
-                {
-                    "value": serial_value,
-                    "score": 100,
-                    "source": "ubiquiti_identifier",
-                    "line": None,
-                    "reasons": ["ubiquiti_parenthesized_identifier+100"],
-                    "reason": "ubiquiti_parenthesized_identifier+100",
-                    "rejected": False,
-                },
-                *serial_debug.get("candidates", []),
-            ],
-        }
+    serial_debug = (
+        _ubiquiti_serial_debug(ubiquiti_fields.get("serial_number", ""))
+        if ubiquiti_fields
+        else extract_serial(text, barcodes, resolved_vendor)
+    )
 
     return {
         "serial_number": serial_debug["best_guess_serial"],

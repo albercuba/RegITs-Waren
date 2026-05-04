@@ -137,7 +137,7 @@ class SerialExtractionTests(unittest.TestCase):
                     "Ubiquiti Inc.",
                     "ui.com",
                     "USW-Lite-8-PoE",
-                    "( AK ) 58D61F517119",
+                    "(AK)58D61F517119",
                     "UPC",
                     "8 10010 07115 6",
                 ]
@@ -150,6 +150,26 @@ class SerialExtractionTests(unittest.TestCase):
         self.assertEqual(fields["serial_number"], "58D61F517119")
         self.assertNotEqual(fields["serial_number"], "USW-LITE-8-POE")
         self.assertEqual(debug["candidates"][0]["source"], "ubiquiti_identifier")
+
+    def test_ubiquiti_model_is_not_serial_when_identifier_is_missing(self) -> None:
+        fields, debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "Ubiquiti Inc.",
+                    "USW-Lite-8-PoE",
+                    "UPC",
+                    "8 10010 07115 6",
+                    "Made in China",
+                ]
+            ),
+            ["USW-LITE-8-POE", "810010071156"],
+        )
+
+        self.assertEqual(fields["vendor"], "Ubiquiti")
+        self.assertEqual(fields["model"], "USW-Lite-8-PoE")
+        self.assertEqual(fields["serial_number"], "")
+        self.assertEqual(fields["notes"], "UPC: 810010071156")
+        self.assertTrue(debug["needs_confirmation"])
 
 
 if __name__ == "__main__":

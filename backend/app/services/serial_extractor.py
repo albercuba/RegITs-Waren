@@ -95,6 +95,11 @@ def _looks_like_mac(value: str) -> bool:
     return bool(re.fullmatch(r"[0-9A-F]{2}(?::[0-9A-F]{2}){5}", value.upper()))
 
 
+def _looks_like_ubiquiti_model(value: str) -> bool:
+    clean = _clean_candidate(value)
+    return bool(re.fullmatch(r"(?:USW|U7|U6|UAP|UDM|UCG|UXG)-[A-Z0-9]+(?:-[A-Z0-9]+){0,6}", clean))
+
+
 def _context_for(text: str, start: int, end: int) -> str:
     return text[max(0, start - 32):min(len(text), end + 32)]
 
@@ -174,6 +179,10 @@ def _score_candidate(
         score -= 80
         reasons.append("known_product_or_part_code-80")
 
+    if vendor == "Ubiquiti" and _looks_like_ubiquiti_model(clean):
+        score -= 100
+        reasons.append("ubiquiti_model_not_serial-100")
+
     if line is not None and line_count:
         position_ratio = line / line_count
         if position_ratio <= 0.65:
@@ -206,6 +215,8 @@ def _add_candidate(
     vendor: str,
 ) -> None:
     clean = _clean_candidate(value)
+    if vendor == "Ubiquiti" and _looks_like_ubiquiti_model(clean):
+        return
     allow_product_barcode_shape = has_keyword or source in {"keyword_serial", "hp_serial", "lenovo_serial"}
     if not _looks_like_serial(clean, allow_product_barcode_shape):
         return
