@@ -39,10 +39,10 @@ MAC_PATTERNS = (
 )
 
 UBIQUITI_MODEL_PATTERN = re.compile(
-    r"\b((?:U[67]|U7|USW|UAP|UDM|UCG|UXG)-[A-Z0-9]+(?:-[A-Z0-9]+){0,6})\b",
+    r"\b((?:U7|U6|UAP|USW|UDM|UCG|UXG)[ \t-]+[A-Z0-9]+(?:[ \t-]+[A-Z0-9]+){0,6})\b",
     re.IGNORECASE,
 )
-UBIQUITI_SERIAL_PATTERN = re.compile(r"\(([A-Z]{2})\)\s*([0-9A-Fa-f]{12})\b")
+UBIQUITI_SERIAL_PATTERN = re.compile(r"\(([A-Z]{2})\)\s*([0-9A-Fa-f]{12})\b", re.IGNORECASE)
 SPACED_UPC_PATTERN = re.compile(r"\b(\d\s+\d{5}\s+\d{5}\s+\d)\b")
 UPC_PATTERN = re.compile(r"\b(\d{12})\b")
 
@@ -60,16 +60,40 @@ def _contains_any(text: str, values: tuple[str, ...]) -> bool:
 
 
 def is_ubiquiti_label(text: str) -> bool:
+    has_model = bool(UBIQUITI_MODEL_PATTERN.search(text))
+    has_serial_marker = bool(UBIQUITI_SERIAL_PATTERN.search(text))
     return bool(
         re.search(r"\b(?:Ubiquiti|UniFi)\b", text, re.IGNORECASE)
         or re.search(r"\bui\.com\b", text, re.IGNORECASE)
-        or UBIQUITI_MODEL_PATTERN.search(text)
+        or has_model
+        or (has_serial_marker and has_model)
     )
+
+
+def _format_ubiquiti_model(value: str) -> str:
+    normalized = re.sub(r"[ \t]+", "-", value.strip(" .,:;"))
+    parts = [part for part in normalized.split("-") if part]
+    if not parts:
+        return ""
+    prefix = parts[0].upper()
+    if prefix in {"U7", "U6", "UAP", "UDM", "UCG", "UXG"}:
+        return "-".join(part.upper() for part in [prefix, *parts[1:]])
+    if prefix == "USW":
+        formatted = [prefix]
+        for part in parts[1:]:
+            if part.isdigit():
+                formatted.append(part)
+            elif part.lower() == "poe":
+                formatted.append("PoE")
+            else:
+                formatted.append(part[:1].upper() + part[1:].lower())
+        return "-".join(formatted)
+    return normalized
 
 
 def extract_ubiquiti_model(text: str) -> str | None:
     match = UBIQUITI_MODEL_PATTERN.search(text)
-    return match.group(1).strip(" .,:;") if match else None
+    return _format_ubiquiti_model(match.group(1)) if match else None
 
 
 def extract_ubiquiti_serial(text: str) -> str | None:

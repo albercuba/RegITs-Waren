@@ -171,6 +171,45 @@ class SerialExtractionTests(unittest.TestCase):
         self.assertEqual(fields["notes"], "UPC: 810010071156")
         self.assertTrue(debug["needs_confirmation"])
 
+    def test_ubiquiti_u7_lr_label_without_vendor_text(self) -> None:
+        fields, debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "U7-LR",
+                    "(RX)847848C64FB6",
+                    "UPC",
+                    "8 10177 16192 9",
+                    "08/18/25",
+                    "Made in Vietnam",
+                ]
+            ),
+            [],
+        )
+
+        self.assertEqual(fields["vendor"], "Ubiquiti")
+        self.assertEqual(fields["model"], "U7-LR")
+        self.assertEqual(fields["serial_number"], "847848C64FB6")
+        self.assertEqual(fields["notes"], "UPC: 810177161929")
+        self.assertEqual(debug["confidence"], 1.0)
+
+    def test_ubiquiti_u7_lr_label_with_noisy_spacing_and_casing(self) -> None:
+        fields, _debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "u7 lr",
+                    "(rx) 847848c64fb6",
+                    "upc",
+                    "8 10177 16192 9",
+                ]
+            ),
+            [],
+        )
+
+        self.assertEqual(fields["vendor"], "Ubiquiti")
+        self.assertEqual(fields["model"], "U7-LR")
+        self.assertEqual(fields["serial_number"], "847848C64FB6")
+        self.assertEqual(fields["notes"], "UPC: 810177161929")
+
 
 if __name__ == "__main__":
     unittest.main()
