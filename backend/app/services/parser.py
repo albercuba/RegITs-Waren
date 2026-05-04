@@ -38,6 +38,36 @@ MAC_PATTERNS = (
     r"\bMAC\s*[:#-]?\s*([0-9A-F]{2}(?::[0-9A-F]{2}){5})\b",
 )
 
+SERIAL_LABEL_PATTERNS = (
+    r"S\s*/\s*N",
+    r"SN",
+    r"Serial(?:\s+No\.?|\s+Number)?",
+    r"Seriennummer",
+)
+
+PART_MODEL_LABELS = (
+    r"Part\s+Code",
+    r"Part\s+No\.?",
+    r"P\s*/\s*N",
+)
+
+MODEL_NO_LABELS = (
+    r"Model\s+No\.?",
+    r"Model",
+    r"Modell",
+    r"Artikelnummer",
+    r"Item\s+No\.?",
+)
+
+NON_VALUE_PATTERN = re.compile(
+    r"^(?:Accessories?|Made\s+in\b.*|HDMI\b.*|BLACK|WHITE|SILVER|GREY|GRAY|UPC|EAN|LCD\s+monitor)$",
+    re.IGNORECASE,
+)
+MODEL_VALUE_PATTERN = r"[A-Z0-9][A-Z0-9._/-]{2,40}"
+SERIAL_VALUE_PATTERN = r"[A-Z0-9][A-Z0-9-]{5,29}"
+EAN_13_SPACED_PATTERN = re.compile(r"\b(\d\s+\d{6}\s+\d{6})\b")
+COLOR_PATTERN = re.compile(r"\b(BLACK|WHITE|SILVER|GREY|GRAY)\b", re.IGNORECASE)
+
 UBIQUITI_MODEL_PATTERN = re.compile(
     r"\b((?:U7|U6|UAP|USW|UDM|UCG|UXG)[ \t-]+[A-Z0-9]+(?:[ \t-]+[A-Z0-9]+){0,6})\b",
     re.IGNORECASE,
@@ -57,6 +87,127 @@ def _first_match(patterns: tuple[str, ...], text: str) -> str:
 
 def _contains_any(text: str, values: tuple[str, ...]) -> bool:
     return any(re.search(rf"\b{re.escape(value)}\b", text, re.IGNORECASE) for value in values)
+
+
+def _clean_lines(text: str) -> list[str]:
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def _is_obvious_non_value(value: str) -> bool:
+    return bool(NON_VALUE_PATTERN.search(value.strip()))
+
+
+def _format_code(value: str) -> str:
+    return value.strip(" .,:;").upper()
+
+
+def extract_value_after_label(lines: list[str], label_patterns: tuple[str, ...], value_regex: str) -> str | None:
+    value_pattern = re.compile(rf"^({value_regex})\b", re.IGNORECASE)
+    for index, line in enumerate(lines):
+        for label in label_patterns:
+            label_match = re.search(rf"\b{label}\b\s*[:#.-]?", line, re.IGNORECASE)
+            if not label_match:
+                continue
+
+            tail = line[label_match.end():].strip(" :#.-")
+            tail_match = value_pattern.search(tail)
+            if tail_match and not _is_obvious_non_value(tail_match.group(1)):
+                return _format_code(tail_match.group(1))
+
+            for next_line in lines[index + 1:index + 3]:
+                if _is_obvious_non_value(next_line):
+                    continue
+                next_match = value_pattern.search(next_line.strip(" :#.-"))
+                if next_match:
+                    return _format_code(next_match.group(1))
+    return None
+
+
+def _extract_product_barcode(text: str, barcode_candidates: list[str]) -> str:
+    for match in EAN_13_SPACED_PATTERN.finditer(text):
+        digits = re.sub(r"\D", "", match.group(1))
+        if len(digits) == 13:
+            return digits
+
+    for barcode in barcode_candidates:
+        digits = re.sub(r"\D", "", barcode)
+        if len(digits) in {12, 13}:
+            return digits
+
+    return ""
+
+
+def _extract_product_line(lines: list[str], text: str) -> str:
+    match = re.search(r"\b(ProLite)\s+([A-Z0-9-]{4,})\b", text, re.IGNORECASE)
+    if match:
+        return f"ProLite {_format_code(match.group(2))}"
+
+    for index, line in enumerate(lines[:-1]):
+        if re.fullmatch(r"ProLite", line, re.IGNORECASE):
+            next_line = lines[index + 1].strip()
+            if re.fullmatch(r"[A-Z0-9-]{4,}", next_line, re.IGNORECASE):
+                return f"ProLite {_format_code(next_line)}"
+    return ""
+
+
+def _extract_color(text: str) -> str:
+    match = COLOR_PATTERN.search(text)
+    return match.group(1).upper() if match else ""
+
+
+def _generic_serial_debug(serial_number: str) -> dict:
+    return {
+        "best_guess_serial": serial_number,
+        "confidence_score": 100,
+        "confidence": 1.0,
+        "confidence_threshold": 70,
+        "needs_confirmation": False,
+        "candidates": [
+            {
+                "value": serial_number,
+                "score": 100,
+                "source": "labeled_serial",
+                "line": None,
+                "reasons": ["explicit_serial_label+100"],
+                "reason": "explicit_serial_label+100",
+                "rejected": False,
+            }
+        ],
+        "normalized_text": "",
+        "warnings": [],
+    }
+
+
+def parse_labeled_fields(text: str, barcode_candidates: list[str] | None = None) -> dict[str, str]:
+    lines = _clean_lines(text)
+    barcode_candidates = barcode_candidates or []
+    fields = {
+        "serial_number": extract_value_after_label(lines, SERIAL_LABEL_PATTERNS, SERIAL_VALUE_PATTERN) or "",
+        "vendor": next((vendor for vendor in VENDORS if re.search(rf"\b{re.escape(vendor)}\b", text, re.I)), ""),
+        "model": "",
+        "asset_type": _detect_asset_type(text),
+        "notes": "",
+    }
+
+    part_model = extract_value_after_label(lines, PART_MODEL_LABELS, MODEL_VALUE_PATTERN) or ""
+    model_no = extract_value_after_label(lines, MODEL_NO_LABELS, MODEL_VALUE_PATTERN) or ""
+    fields["model"] = part_model or model_no
+
+    notes = []
+    product_barcode = _extract_product_barcode(text, barcode_candidates)
+    product_line = _extract_product_line(lines, text)
+    color = _extract_color(text)
+    if product_barcode:
+        notes.append(f"UPC/EAN: {product_barcode}")
+    if product_line:
+        notes.append(f"Product line: {product_line}")
+    if model_no and part_model:
+        notes.append(f"Model No.: {model_no}")
+    if color:
+        notes.append(f"Color: {color}")
+    fields["notes"] = "; ".join(dict.fromkeys(notes))
+
+    return fields
 
 
 def is_ubiquiti_label(text: str) -> bool:
@@ -271,23 +422,31 @@ def parse_label_data_with_debug(text: str, barcodes: list[str] | None = None) ->
     clean_text = " ".join(text.split())
     barcodes = barcodes or []
     ubiquiti_fields = parse_ubiquiti_label(text, barcodes) or {}
+    labeled_fields = {} if ubiquiti_fields else parse_labeled_fields(text, barcodes)
     product = _known_product_from_text(clean_text) or _known_product_from_barcode(clean_text, barcodes)
     vendor = next((vendor for vendor in VENDORS if re.search(rf"\b{re.escape(vendor)}\b", clean_text, re.I)), "")
     model = _first_match(MODEL_PATTERNS, clean_text)
     asset_type = _detect_asset_type(clean_text)
     notes = _build_notes(clean_text)
 
-    resolved_vendor = ubiquiti_fields.get("vendor", "") or vendor or str(product.get("vendor", ""))
+    resolved_vendor = ubiquiti_fields.get("vendor", "") or labeled_fields.get("vendor", "") or vendor or str(product.get("vendor", ""))
     serial_debug = (
         _ubiquiti_serial_debug(ubiquiti_fields.get("serial_number", ""))
         if ubiquiti_fields
+        else _generic_serial_debug(labeled_fields["serial_number"])
+        if labeled_fields.get("serial_number")
         else extract_serial(text, barcodes, resolved_vendor)
     )
 
     return {
         "serial_number": serial_debug["best_guess_serial"],
         "vendor": resolved_vendor,
-        "model": ubiquiti_fields.get("model", "") or str(product.get("model", "")) or model,
-        "asset_type": ubiquiti_fields.get("asset_type", "") or asset_type or str(product.get("asset_type", "")),
-        "notes": _merge_notes(ubiquiti_fields.get("notes", ""), notes, product.get("notes", ())),
+        "model": ubiquiti_fields.get("model", "") or labeled_fields.get("model", "") or str(product.get("model", "")) or model,
+        "asset_type": ubiquiti_fields.get("asset_type", "") or labeled_fields.get("asset_type", "") or asset_type or str(product.get("asset_type", "")),
+        "notes": _merge_notes(
+            ubiquiti_fields.get("notes", ""),
+            labeled_fields.get("notes", ""),
+            notes,
+            product.get("notes", ()),
+        ),
     }, serial_debug

@@ -43,6 +43,70 @@ class SerialExtractionTests(unittest.TestCase):
             "1278360205091",
         )
 
+    def test_iiyama_label_extracts_labeled_fields_and_notes(self) -> None:
+        fields, debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "ProLite",
+                    "X2491H",
+                    "iiyama",
+                    "4 948570 127832",
+                    "S/N: 1278360205091",
+                    "Part Code",
+                    "X2491H-B1",
+                    "Accessories",
+                    "HDMI & Power cables",
+                    "BLACK",
+                    "LCD monitor",
+                    "Model No. PL2491HA",
+                    "MADE IN CHINA",
+                ]
+            ),
+            [],
+        )
+
+        self.assertEqual(fields["vendor"], "iiyama")
+        self.assertEqual(fields["model"], "X2491H-B1")
+        self.assertEqual(fields["serial_number"], "1278360205091")
+        self.assertIn("UPC/EAN: 4948570127832", fields["notes"])
+        self.assertIn("Product line: ProLite X2491H", fields["notes"])
+        self.assertIn("Model No.: PL2491HA", fields["notes"])
+        self.assertIn("Color: BLACK", fields["notes"])
+        self.assertEqual(debug["candidates"][0]["source"], "labeled_serial")
+
+    def test_iiyama_same_line_labeled_fields(self) -> None:
+        fields, _debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "iiyama",
+                    "S/N: 1278360205091",
+                    "Part Code: X2491H-B1",
+                    "Model No. PL2491HA",
+                    "4 948570 127832",
+                ]
+            ),
+            [],
+        )
+
+        self.assertEqual(fields["vendor"], "iiyama")
+        self.assertEqual(fields["model"], "X2491H-B1")
+        self.assertEqual(fields["serial_number"], "1278360205091")
+        self.assertIn("UPC/EAN: 4948570127832", fields["notes"])
+
+    def test_labeled_serial_wins_over_ean(self) -> None:
+        fields, _debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "S/N: 1278360205091",
+                    "4 948570 127832",
+                ]
+            ),
+            ["4948570127832"],
+        )
+
+        self.assertEqual(fields["serial_number"], "1278360205091")
+        self.assertNotEqual(fields["serial_number"], "4948570127832")
+
     def test_german_ser_nr_label(self) -> None:
         self.assert_serial(
             "\n".join(
