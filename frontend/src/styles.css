@@ -581,6 +581,10 @@ textarea { resize: vertical; }
   margin-bottom: 0;
 }
 
+.location-actions {
+  margin-top: 14px;
+}
+
 .recent-list { display: grid; gap: 10px; }
 
 .submission-row {

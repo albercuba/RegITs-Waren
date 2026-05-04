@@ -212,7 +212,7 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
-            <div className="settings-actions">
+            <div className="settings-actions location-actions">
               <button className="button secondary" disabled={busy} onClick={addLocation} type="button">
                 <Plus size={20} />
                 <span>Standort hinzufügen</span>
