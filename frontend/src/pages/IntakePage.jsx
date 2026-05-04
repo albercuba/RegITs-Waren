@@ -33,15 +33,31 @@ function germanError(message) {
 }
 
 export default function IntakePage() {
-  const [photo, setPhoto] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [photos, setPhotos] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [ocrStatus, setOcrStatus] = useState("Manuelle Eingabe erforderlich");
   const [message, setMessage] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const canSend = useMemo(() => Boolean(photo && form.asset_type && (form.serial_number || form.notes)), [photo, form]);
+  const canSend = useMemo(() => Boolean(photos.length && form.asset_type && (form.serial_number || form.notes)), [photos, form]);
+
+  function mergeDetectedFields(current, result) {
+    const fields = result.fields || {};
+    return {
+      ...current,
+      serial_number: current.serial_number || fields.serial_number || "",
+      asset_type: current.asset_type || fields.asset_type || "",
+      vendor: current.vendor || fields.vendor || "",
+      model: current.model || fields.model || "",
+      notes: [current.notes, fields.notes].filter(Boolean).join(current.notes && fields.notes ? "\n" : ""),
+      raw_text: [current.raw_text, result.raw_text].filter(Boolean).join("\n\n"),
+      detected_candidates: JSON.stringify([
+        ...JSON.parse(current.detected_candidates || "[]"),
+        ...(result.serial_candidates || []),
+      ]),
+    };
+  }
 
   async function scanSelectedPhoto(file) {
     setScanning(true);
@@ -49,12 +65,7 @@ export default function IntakePage() {
     setMessage(null);
     try {
       const result = await scanPhoto(file);
-      setForm((current) => ({
-        ...current,
-        ...result.fields,
-        raw_text: result.raw_text || "",
-        detected_candidates: JSON.stringify(result.serial_candidates || []),
-      }));
+      setForm((current) => mergeDetectedFields(current, result));
       setOcrStatus(
         result.serial_debug?.needs_confirmation
           ? "Seriennummer bitte prüfen"
@@ -71,33 +82,47 @@ export default function IntakePage() {
   }
 
   function handleFileChange(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setPhoto(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    scanSelectedPhoto(file);
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    setPhotos((current) => [
+      ...current,
+      ...files.map((file) => ({
+        id: crypto.randomUUID(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    ]);
+    event.target.value = "";
+    scanSelectedPhoto(files[0]);
   }
 
-  function resetPhoto() {
-    setPhoto(null);
-    setPreviewUrl("");
-    setOcrStatus("Manuelle Eingabe erforderlich");
+  function removePhoto(id) {
+    setPhotos((current) => {
+      const target = current.find((photo) => photo.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      const next = current.filter((photo) => photo.id !== id);
+      if (next.length === 0) setOcrStatus("Manuelle Eingabe erforderlich");
+      return next;
+    });
   }
 
   async function handleScan() {
-    if (!photo) return;
-    await scanSelectedPhoto(photo);
+    for (const photo of photos) {
+      await scanSelectedPhoto(photo.file);
+    }
   }
 
   async function handleSubmit() {
-    if (!photo) return;
+    if (!photos.length) return;
     setSending(true);
     setMessage(null);
     try {
-      const result = await createSubmission(form, photo);
+      const result = await createSubmission(form, photos.map((photo) => photo.file));
       setMessage({ type: "success", text: `Eintrag #${result.id} gesendet` });
       setForm(emptyForm);
-      resetPhoto();
+      photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+      setPhotos([]);
+      setOcrStatus("Manuelle Eingabe erforderlich");
     } catch (error) {
       setMessage({ type: "error", text: germanError(error.message) });
     } finally {
@@ -113,11 +138,11 @@ export default function IntakePage() {
       </header>
 
       <PhotoCapture
-        disabled={!photo}
+        disabled={!photos.length}
         onFileChange={handleFileChange}
-        onRetake={resetPhoto}
+        onRemovePhoto={removePhoto}
         onScan={handleScan}
-        previewUrl={previewUrl}
+        photos={photos}
         scanning={scanning}
       />
 

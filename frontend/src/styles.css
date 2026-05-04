@@ -281,6 +281,43 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   object-fit: contain;
 }
 
+.photo-grid {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+  padding: 10px;
+}
+
+.photo-tile {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg2);
+  padding: 8px;
+}
+
+.photo-tile img {
+  aspect-ratio: 4 / 3;
+  max-height: none;
+  border-radius: calc(var(--r) - 2px);
+  background: var(--bg3);
+}
+
+.photo-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .empty-preview {
   display: grid;
   gap: 12px;
@@ -626,6 +663,10 @@ textarea { resize: vertical; }
   .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .photo-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   .photo-actions > .button:only-child {
     grid-column: 2;

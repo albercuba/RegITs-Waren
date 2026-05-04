@@ -23,10 +23,12 @@ export async function scanPhoto(photo) {
   return parseResponse(response);
 }
 
-export async function createSubmission(metadata, photo) {
+export async function createSubmission(metadata, photos) {
   const formData = new FormData();
   formData.append("metadata", JSON.stringify(metadata));
-  formData.append("photo", photo);
+  for (const photo of photos) {
+    formData.append("photos", photo);
+  }
   const response = await fetch(`${API_BASE}/submissions`, { method: "POST", body: formData });
   return parseResponse(response);
 }

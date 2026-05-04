@@ -77,7 +77,7 @@ def send_test_email(settings: SmtpSettings) -> None:
     _send_message(settings, message)
 
 
-def send_intake_email(metadata: IntakeMetadata, image_path: Path, created_at: str) -> None:
+def send_intake_email(metadata: IntakeMetadata, image_paths: list[Path], created_at: str) -> None:
     settings = load_smtp_settings()
     if not settings:
         raise RuntimeError("SMTP-Einstellungen sind nicht konfiguriert")
@@ -101,8 +101,9 @@ def send_intake_email(metadata: IntakeMetadata, image_path: Path, created_at: st
         ]
     )
     message.set_content(body)
-    data = image_path.read_bytes()
-    message.add_attachment(data, maintype="image", subtype=image_path.suffix.lstrip(".") or "jpeg", filename=image_path.name)
+    for image_path in image_paths:
+        data = image_path.read_bytes()
+        message.add_attachment(data, maintype="image", subtype=image_path.suffix.lstrip(".") or "jpeg", filename=image_path.name)
     _send_message(settings, message)
 
 

@@ -102,22 +102,26 @@ def get_scan_debug(debug_id: int) -> dict:
 
 
 @router.post("/submissions")
-def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) -> dict:
+def create_submission(metadata: str = Form(...), photos: list[UploadFile] = File(...)) -> dict:
     try:
         payload = IntakeMetadata(**json.loads(metadata))
     except Exception as exc:
         raise HTTPException(status_code=400, detail="Ungültige Metadaten") from exc
 
-    image_path = _save_upload(photo, "intake")
+    if not photos:
+        raise HTTPException(status_code=400, detail="Mindestens ein Foto ist erforderlich")
+
+    image_paths = [_save_upload(photo, "intake") for photo in photos]
+    primary_image_path = image_paths[0]
     created_at = utc_now()
     with get_db() as conn:
         cursor = conn.execute(
             """
             INSERT INTO submissions (
                 created_at, serial_number, asset_type, vendor, model, received_by, notes, image_path,
-                raw_text, detected_candidates, user_corrected_serial
+                raw_text, detected_candidates, user_corrected_serial, image_paths
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 created_at,
@@ -127,20 +131,21 @@ def create_submission(metadata: str = Form(...), photo: UploadFile = File(...)) 
                 payload.model,
                 payload.received_by,
                 payload.notes,
-                str(image_path),
+                str(primary_image_path),
                 payload.raw_text,
                 payload.detected_candidates,
                 payload.serial_number,
+                json.dumps([str(path) for path in image_paths], ensure_ascii=False),
             ),
         )
         submission_id = cursor.lastrowid
 
     try:
-        send_intake_email(payload, image_path, created_at)
+        send_intake_email(payload, image_paths, created_at)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Eintrag gespeichert, aber E-Mail-Versand fehlgeschlagen: {exc}") from exc
 
-    return {"id": submission_id, "created_at": created_at, "image_path": image_path.name}
+    return {"id": submission_id, "created_at": created_at, "image_paths": [path.name for path in image_paths]}
 
 
 @router.get("/submissions")

@@ -43,6 +43,7 @@ def init_db() -> None:
         )
         _ensure_column(conn, "submissions", "detected_candidates", "TEXT")
         _ensure_column(conn, "submissions", "user_corrected_serial", "TEXT")
+        _ensure_column(conn, "submissions", "image_paths", "TEXT")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS email_settings (
