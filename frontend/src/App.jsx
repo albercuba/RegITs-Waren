@@ -1,4 +1,4 @@
-import { Inbox, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
+import { Inbox, Moon, Settings, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminPage from "./pages/AdminPage.jsx";
 import IntakePage from "./pages/IntakePage.jsx";
@@ -6,19 +6,8 @@ import regitsLogo from "./assets/regits_cloud_logo.png";
 
 const navItems = [
   { id: "receiving", label: "Wareneingang", icon: Inbox },
-  { id: "audit", label: "Audit-Protokoll", icon: ShieldCheck },
   { id: "admin", label: "Admin", icon: Settings },
 ];
-
-function Placeholder({ title }) {
-  return (
-    <section className="panel placeholder-panel">
-      <p className="eyebrow">Demnächst</p>
-      <h2>{title}</h2>
-      <p>Diese Ansicht ist für die nächste Version reserviert. Wareneingang und Admin-Einstellungen sind im MVP bereit.</p>
-    </section>
-  );
-}
 
 function getInitialTheme() {
   const saved = localStorage.getItem("regits-theme");
@@ -89,7 +78,6 @@ export default function App() {
       <main className="content">
         {activeView === "receiving" && <IntakePage />}
         {activeView === "admin" && <AdminPage />}
-        {activeView === "audit" && <Placeholder title="Audit-Protokoll" />}
       </main>
     </div>
   );
