@@ -65,6 +65,70 @@ class SerialExtractionTests(unittest.TestCase):
         self.assertEqual(fields["serial_number"], "2601TVZ1C6D9")
         self.assertGreaterEqual(debug["confidence"], 0.7)
 
+    def test_ubiquiti_u7_lr_label(self) -> None:
+        fields, debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "Ubiquiti Inc.",
+                    "ui.com",
+                    "U7-LR",
+                    "(RX)847848C64FB6",
+                    "UPC",
+                    "8 10177 16192 9",
+                    "08/18/25",
+                    "Made in Vietnam",
+                ]
+            ),
+            [],
+        )
+
+        self.assertEqual(fields["vendor"], "Ubiquiti")
+        self.assertEqual(fields["model"], "U7-LR")
+        self.assertEqual(fields["serial_number"], "847848C64FB6")
+        self.assertEqual(fields["notes"], "UPC: 810177161929")
+        self.assertEqual(debug["confidence"], 1.0)
+
+    def test_ubiquiti_usw_lite_label(self) -> None:
+        fields, _debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "Ubiquiti Inc.",
+                    "ui.com",
+                    "USW-Lite-8-PoE",
+                    "(AK)58D61F517119",
+                    "UPC",
+                    "8 10010 07115 6",
+                    "11/17/25",
+                    "Made in China",
+                ]
+            ),
+            [],
+        )
+
+        self.assertEqual(fields["vendor"], "Ubiquiti")
+        self.assertEqual(fields["model"], "USW-Lite-8-PoE")
+        self.assertEqual(fields["serial_number"], "58D61F517119")
+        self.assertEqual(fields["notes"], "UPC: 810010071156")
+
+    def test_ubiquiti_upc_is_not_selected_as_serial_number(self) -> None:
+        fields, debug = parse_label_data_with_debug(
+            "\n".join(
+                [
+                    "Ubiquiti Inc.",
+                    "USW-Lite-8-PoE",
+                    "(AK)58D61F517119",
+                    "UPC",
+                    "8 10010 07115 6",
+                ]
+            ),
+            ["810010071156"],
+        )
+
+        self.assertEqual(fields["serial_number"], "58D61F517119")
+        self.assertNotEqual(fields["serial_number"], "810010071156")
+        self.assertEqual(fields["notes"], "UPC: 810010071156")
+        self.assertEqual(debug["candidates"][0]["source"], "ubiquiti_identifier")
+
 
 if __name__ == "__main__":
     unittest.main()

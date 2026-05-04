@@ -38,6 +38,14 @@ MAC_PATTERNS = (
     r"\bMAC\s*[:#-]?\s*([0-9A-F]{2}(?::[0-9A-F]{2}){5})\b",
 )
 
+UBIQUITI_MODEL_PATTERN = re.compile(
+    r"\b((?:U[67]|U7|USW|UAP|UDM|UCG|UXG)-[A-Z0-9]+(?:-[A-Z0-9]+){0,6})\b",
+    re.IGNORECASE,
+)
+UBIQUITI_SERIAL_PATTERN = re.compile(r"\(([A-Z]{2})\)\s*([0-9A-Fa-f]{12})\b")
+SPACED_UPC_PATTERN = re.compile(r"\b(\d\s+\d{5}\s+\d{5}\s+\d)\b")
+UPC_PATTERN = re.compile(r"\b(\d{12})\b")
+
 
 def _first_match(patterns: tuple[str, ...], text: str) -> str:
     for pattern in patterns:
@@ -49,6 +57,63 @@ def _first_match(patterns: tuple[str, ...], text: str) -> str:
 
 def _contains_any(text: str, values: tuple[str, ...]) -> bool:
     return any(re.search(rf"\b{re.escape(value)}\b", text, re.IGNORECASE) for value in values)
+
+
+def is_ubiquiti_label(text: str) -> bool:
+    return bool(
+        re.search(r"\b(?:Ubiquiti|UniFi)\b", text, re.IGNORECASE)
+        or re.search(r"\bui\.com\b", text, re.IGNORECASE)
+        or UBIQUITI_MODEL_PATTERN.search(text)
+    )
+
+
+def extract_ubiquiti_model(text: str) -> str | None:
+    match = UBIQUITI_MODEL_PATTERN.search(text)
+    return match.group(1).strip(" .,:;") if match else None
+
+
+def extract_ubiquiti_serial(text: str) -> str | None:
+    match = UBIQUITI_SERIAL_PATTERN.search(text)
+    return match.group(2).upper() if match else None
+
+
+def _normalize_upc(value: str) -> str:
+    return re.sub(r"\D", "", value)
+
+
+def extract_upc(text: str, barcode_candidates: list[str] | None = None) -> str | None:
+    for match in re.finditer(r"\bUPC\b", text, re.IGNORECASE):
+        window = text[match.end():match.end() + 80]
+        spaced = SPACED_UPC_PATTERN.search(window)
+        if spaced:
+            return _normalize_upc(spaced.group(1))
+        compact = UPC_PATTERN.search(window)
+        if compact:
+            return compact.group(1)
+
+    for barcode in barcode_candidates or []:
+        digits = _normalize_upc(barcode)
+        if len(digits) == 12:
+            return digits
+
+    return None
+
+
+def parse_ubiquiti_label(text: str, barcode_candidates: list[str] | None = None) -> dict[str, str] | None:
+    if not is_ubiquiti_label(text):
+        return None
+
+    fields = {
+        "vendor": "Ubiquiti",
+        "model": extract_ubiquiti_model(text) or "",
+        "asset_type": "Netzwerkgerät",
+        "serial_number": extract_ubiquiti_serial(text) or "",
+        "notes": "",
+    }
+    upc = extract_upc(text, barcode_candidates)
+    if upc:
+        fields["notes"] = f"UPC: {upc}"
+    return fields
 
 
 def _detect_asset_type(text: str) -> str:
@@ -145,19 +210,42 @@ def parse_label_data(text: str, barcodes: list[str] | None = None) -> dict[str, 
 def parse_label_data_with_debug(text: str, barcodes: list[str] | None = None) -> tuple[dict[str, str], dict]:
     clean_text = " ".join(text.split())
     barcodes = barcodes or []
+    ubiquiti_fields = parse_ubiquiti_label(text, barcodes) or {}
     product = _known_product_from_text(clean_text) or _known_product_from_barcode(clean_text, barcodes)
     vendor = next((vendor for vendor in VENDORS if re.search(rf"\b{re.escape(vendor)}\b", clean_text, re.I)), "")
     model = _first_match(MODEL_PATTERNS, clean_text)
     asset_type = _detect_asset_type(clean_text)
     notes = _build_notes(clean_text)
 
-    resolved_vendor = vendor or str(product.get("vendor", ""))
+    resolved_vendor = ubiquiti_fields.get("vendor", "") or vendor or str(product.get("vendor", ""))
     serial_debug = extract_serial(text, barcodes, resolved_vendor)
+    if ubiquiti_fields.get("serial_number"):
+        serial_value = ubiquiti_fields["serial_number"]
+        serial_debug = {
+            **serial_debug,
+            "best_guess_serial": serial_value,
+            "confidence_score": 100,
+            "confidence": 1.0,
+            "needs_confirmation": False,
+            "warnings": [],
+            "candidates": [
+                {
+                    "value": serial_value,
+                    "score": 100,
+                    "source": "ubiquiti_identifier",
+                    "line": None,
+                    "reasons": ["ubiquiti_parenthesized_identifier+100"],
+                    "reason": "ubiquiti_parenthesized_identifier+100",
+                    "rejected": False,
+                },
+                *serial_debug.get("candidates", []),
+            ],
+        }
 
     return {
         "serial_number": serial_debug["best_guess_serial"],
         "vendor": resolved_vendor,
-        "model": str(product.get("model", "")) or model,
-        "asset_type": asset_type or str(product.get("asset_type", "")),
-        "notes": _merge_notes(notes, product.get("notes", ())),
+        "model": ubiquiti_fields.get("model", "") or str(product.get("model", "")) or model,
+        "asset_type": ubiquiti_fields.get("asset_type", "") or asset_type or str(product.get("asset_type", "")),
+        "notes": _merge_notes(ubiquiti_fields.get("notes", ""), notes, product.get("notes", ())),
     }, serial_debug
