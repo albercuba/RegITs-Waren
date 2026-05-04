@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+
 const assetTypes = [
   "Laptop",
   "Desktop",
@@ -17,9 +20,57 @@ const fields = [
   ["received_by", "Angenommen von"],
 ];
 
+function LocationDropdown({ locations, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const hasSelectedUnknownLocation = value && !locations.includes(value);
+  const options = hasSelectedUnknownLocation ? [value, ...locations] : locations;
+  const label = value || "Standort auswählen";
+
+  function selectLocation(nextValue) {
+    onChange(nextValue);
+    setOpen(false);
+  }
+
+  return (
+    <div className="custom-select" onBlur={() => setOpen(false)}>
+      <button
+        aria-expanded={open}
+        className="custom-select-button"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <span>{label}</span>
+        <ChevronDown size={18} />
+      </button>
+      {open && (
+        <div className="custom-select-menu" role="listbox">
+          <button
+            className={!value ? "custom-select-option selected" : "custom-select-option"}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => selectLocation("")}
+            type="button"
+          >
+            Standort auswählen
+          </button>
+          {options.map((location) => (
+            <button
+              className={location === value ? "custom-select-option selected" : "custom-select-option"}
+              key={location}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => selectLocation(location)}
+              type="button"
+            >
+              {location}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FormFields({ form, onChange, ocrStatus, locations = [] }) {
   const setField = (name, value) => onChange({ ...form, [name]: value });
-  const hasSelectedUnknownLocation = form.location && !locations.includes(form.location);
 
   return (
     <section className="panel form-panel">
@@ -50,15 +101,7 @@ export default function FormFields({ form, onChange, ocrStatus, locations = [] }
           {name === "received_by" && (
             <label>
               <span>Standort</span>
-              <select value={form.location || ""} onChange={(event) => setField("location", event.target.value)}>
-                <option value="">Standort auswählen</option>
-                {hasSelectedUnknownLocation && <option value={form.location}>{form.location}</option>}
-                {locations.map((location) => (
-                  <option key={location} value={location}>
-                    {location}
-                  </option>
-                ))}
-              </select>
+              <LocationDropdown locations={locations} value={form.location || ""} onChange={(value) => setField("location", value)} />
             </label>
           )}
         </div>
