@@ -1,4 +1,4 @@
-import { ClipboardList, Inbox, Mail, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
+import { Inbox, Mail, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminPage from "./pages/AdminPage.jsx";
 import IntakePage from "./pages/IntakePage.jsx";
@@ -6,7 +6,6 @@ import regitsLogo from "./assets/regits_cloud_logo.png";
 
 const navItems = [
   { id: "receiving", label: "Wareneingang", icon: Inbox },
-  { id: "inventory", label: "Inventar", icon: ClipboardList },
   { id: "queue", label: "E-Mail-Warteschlange", icon: Mail },
   { id: "audit", label: "Audit-Protokoll", icon: ShieldCheck },
   { id: "admin", label: "Admin", icon: Settings },
@@ -91,7 +90,6 @@ export default function App() {
       <main className="content">
         {activeView === "receiving" && <IntakePage />}
         {activeView === "admin" && <AdminPage />}
-        {activeView === "inventory" && <Placeholder title="Inventar" />}
         {activeView === "queue" && <Placeholder title="E-Mail-Warteschlange" />}
         {activeView === "audit" && <Placeholder title="Audit-Protokoll" />}
       </main>
