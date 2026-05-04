@@ -302,6 +302,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   max-height: none;
   border-radius: calc(var(--r) - 2px);
   background: var(--bg3);
+  object-fit: contain;
 }
 
 .photo-remove {

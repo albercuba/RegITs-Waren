@@ -32,6 +32,10 @@ function germanError(message) {
   return map[message] || message;
 }
 
+function createPhotoId() {
+  return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export default function IntakePage() {
   const [photos, setPhotos] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -87,7 +91,7 @@ export default function IntakePage() {
     setPhotos((current) => [
       ...current,
       ...files.map((file) => ({
-        id: crypto.randomUUID(),
+        id: createPhotoId(),
         file,
         previewUrl: URL.createObjectURL(file),
       })),
