@@ -2,14 +2,6 @@ import { MailCheck, Save } from "lucide-react";
 
 export default function SettingsForm({ settings, onChange, onSave, onTest, busy, status }) {
   const setField = (name, value) => onChange({ ...settings, [name]: value });
-  const setLocations = (value) =>
-    setField(
-      "locations",
-      value
-        .split("\n")
-        .map((location) => location.trim())
-        .filter(Boolean)
-    );
 
   return (
     <section className="panel form-panel">
@@ -61,19 +53,6 @@ export default function SettingsForm({ settings, onChange, onSave, onTest, busy,
       <label className="toggle-row">
         <input checked={settings.use_tls} onChange={(event) => setField("use_tls", event.target.checked)} type="checkbox" />
         <span>TLS / STARTTLS verwenden</span>
-      </label>
-      <div className="section-title settings-subsection">
-        <p className="eyebrow">Wareneingang</p>
-        <h2>Standorte</h2>
-      </div>
-      <label>
-        <span>Standorte</span>
-        <textarea
-          onChange={(event) => setLocations(event.target.value)}
-          placeholder={"Lager\nBüro\nAußenstelle"}
-          rows="4"
-          value={(settings.locations || []).join("\n")}
-        />
       </label>
       <div className="settings-actions">
         <button className="button secondary" disabled={busy} onClick={onTest} type="button">

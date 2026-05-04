@@ -44,6 +44,7 @@ export default function IntakePage() {
   const [scanning, setScanning] = useState(false);
   const [sending, setSending] = useState(false);
   const [locations, setLocations] = useState([]);
+  const [defaultReceivedBy, setDefaultReceivedBy] = useState("");
 
   const activePhoto = photos.find((photo) => photo.id === activePhotoId) || photos[0] || null;
   const activePhotoIndex = activePhoto ? photos.findIndex((photo) => photo.id === activePhoto.id) : -1;
@@ -94,6 +95,21 @@ export default function IntakePage() {
     setPhotos((current) => current.map((photo) => (photo.id === photoId ? { ...photo, ocrStatus } : photo)));
   }
 
+  function handleActiveFormChange(nextForm) {
+    if (!activePhoto) return;
+    if (nextForm.received_by !== activePhoto.form.received_by) {
+      setDefaultReceivedBy(nextForm.received_by);
+      setPhotos((current) =>
+        current.map((photo) => ({
+          ...photo,
+          form: photo.id === activePhoto.id ? nextForm : { ...photo.form, received_by: nextForm.received_by },
+        }))
+      );
+      return;
+    }
+    updatePhotoForm(activePhoto.id, nextForm);
+  }
+
   async function scanSelectedPhoto(file, photoId) {
     setScanning(true);
     updatePhotoOcrStatus(photoId, "Etikett wird gescannt...");
@@ -124,7 +140,7 @@ export default function IntakePage() {
         id: createPhotoId(),
         file,
         previewUrl: URL.createObjectURL(file),
-        form: { ...emptyForm },
+        form: { ...emptyForm, received_by: defaultReceivedBy },
         ocrStatus: "Manuelle Eingabe erforderlich",
       }));
     setPhotos((current) => [...current, ...nextPhotos]);
@@ -195,7 +211,7 @@ export default function IntakePage() {
         form={activeForm}
         locations={locations}
         ocrStatus={activePhoto ? activeOcrStatus : "Bitte zuerst ein Foto aufnehmen"}
-        onChange={(nextForm) => activePhoto && updatePhotoForm(activePhoto.id, nextForm)}
+        onChange={handleActiveFormChange}
       />
 
       <SendButton disabled={!canSend} onClick={handleSubmit} sending={sending} />

@@ -5,7 +5,7 @@ import smtplib
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.database import get_db
-from app.models.schemas import EmailSettingsIn, EmailSettingsOut
+from app.models.schemas import EmailSettingsIn, EmailSettingsOut, LocationsIn, LocationsOut
 from app.services.email import send_test_email, settings_from_payload, validate_smtp
 from app.services.security import decrypt_secret, encrypt_secret, require_admin
 
@@ -47,8 +47,33 @@ def _public_settings(row) -> EmailSettingsOut:
         recipient_email=row["recipient_email"],
         use_tls=bool(row["use_tls"]),
         password_configured=bool(row["smtp_password_encrypted"]),
-        locations=_parse_locations(row["locations"]),
     )
+
+
+def _load_locations() -> list[str]:
+    with get_db() as conn:
+        row = conn.execute("SELECT value FROM app_settings WHERE key = 'intake_locations'").fetchone()
+        if row:
+            return _parse_locations(row["value"])
+        legacy = conn.execute("SELECT locations FROM email_settings WHERE id = 1").fetchone()
+    return _parse_locations(legacy["locations"] if legacy else "")
+
+
+def _save_locations(locations: list[str]) -> list[str]:
+    cleaned = _clean_locations(locations)
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO app_settings (key, value, updated_at)
+            VALUES ('intake_locations', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = excluded.updated_at
+            """,
+            (json.dumps(cleaned, ensure_ascii=False), now),
+        )
+    return cleaned
 
 
 @router.get("/email-settings", response_model=EmailSettingsOut)
@@ -56,6 +81,16 @@ def get_email_settings() -> EmailSettingsOut:
     with get_db() as conn:
         row = conn.execute("SELECT * FROM email_settings WHERE id = 1").fetchone()
     return _public_settings(row)
+
+
+@router.get("/locations", response_model=LocationsOut)
+def get_locations() -> LocationsOut:
+    return LocationsOut(locations=_load_locations())
+
+
+@router.post("/locations", response_model=LocationsOut)
+def save_locations(payload: LocationsIn) -> LocationsOut:
+    return LocationsOut(locations=_save_locations(payload.locations))
 
 
 @router.post("/email-settings", response_model=EmailSettingsOut)
@@ -76,16 +111,15 @@ def save_email_settings(payload: EmailSettingsIn) -> EmailSettingsOut:
         raise HTTPException(status_code=400, detail="SMTP-Verbindung fehlgeschlagen") from exc
 
     encrypted_password = encrypt_secret(payload.smtp_password or existing_password)
-    locations = json.dumps(_clean_locations(payload.locations), ensure_ascii=False)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with get_db() as conn:
         conn.execute(
             """
             INSERT INTO email_settings (
                 id, smtp_host, smtp_port, smtp_username, smtp_password_encrypted,
-                sender_email, recipient_email, use_tls, updated_at, locations
+                sender_email, recipient_email, use_tls, updated_at
             )
-            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 smtp_host = excluded.smtp_host,
                 smtp_port = excluded.smtp_port,
@@ -94,8 +128,7 @@ def save_email_settings(payload: EmailSettingsIn) -> EmailSettingsOut:
                 sender_email = excluded.sender_email,
                 recipient_email = excluded.recipient_email,
                 use_tls = excluded.use_tls,
-                updated_at = excluded.updated_at,
-                locations = excluded.locations
+                updated_at = excluded.updated_at
             """,
             (
                 payload.smtp_host,
@@ -106,7 +139,6 @@ def save_email_settings(payload: EmailSettingsIn) -> EmailSettingsOut:
                 str(payload.recipient_email),
                 int(payload.use_tls),
                 now,
-                locations,
             ),
         )
         row = conn.execute("SELECT * FROM email_settings WHERE id = 1").fetchone()

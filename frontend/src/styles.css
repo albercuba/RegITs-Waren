@@ -437,10 +437,6 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   border-bottom: 1px solid var(--border);
 }
 
-.settings-subsection {
-  margin-top: 8px;
-}
-
 label {
   display: grid;
   gap: 8px;
@@ -484,6 +480,33 @@ textarea { resize: vertical; }
 .toggle-row input {
   width: 22px;
   height: 22px;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg3);
+  color: var(--text2);
+}
+
+.location-list {
+  display: grid;
+  gap: 10px;
+}
+
+.location-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 10px;
+  align-items: end;
+}
+
+.location-row label {
+  margin-bottom: 0;
 }
 
 .recent-list { display: grid; gap: 10px; }

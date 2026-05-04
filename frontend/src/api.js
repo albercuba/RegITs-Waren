@@ -50,6 +50,13 @@ export async function getEmailSettings(adminPassword) {
   return parseResponse(response);
 }
 
+export async function getAdminLocations(adminPassword) {
+  const response = await fetch(`${API_BASE}/admin/locations`, {
+    headers: { "X-Admin-Password": adminPassword },
+  });
+  return parseResponse(response);
+}
+
 export async function saveEmailSettings(adminPassword, settings) {
   const response = await fetch(`${API_BASE}/admin/email-settings`, {
     method: "POST",
@@ -58,6 +65,18 @@ export async function saveEmailSettings(adminPassword, settings) {
       "X-Admin-Password": adminPassword,
     },
     body: JSON.stringify(settings),
+  });
+  return parseResponse(response);
+}
+
+export async function saveLocations(adminPassword, locations) {
+  const response = await fetch(`${API_BASE}/admin/locations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Admin-Password": adminPassword,
+    },
+    body: JSON.stringify({ locations }),
   });
   return parseResponse(response);
 }

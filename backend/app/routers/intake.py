@@ -116,8 +116,11 @@ def get_scan_debug(debug_id: int) -> dict:
 @router.get("/locations")
 def list_locations() -> list[str]:
     with get_db() as conn:
-        row = conn.execute("SELECT locations FROM email_settings WHERE id = 1").fetchone()
-    return _parse_locations(row["locations"] if row else "")
+        row = conn.execute("SELECT value FROM app_settings WHERE key = 'intake_locations'").fetchone()
+        if row:
+            return _parse_locations(row["value"])
+        legacy = conn.execute("SELECT locations FROM email_settings WHERE id = 1").fetchone()
+    return _parse_locations(legacy["locations"] if legacy else "")
 
 
 @router.post("/submissions")

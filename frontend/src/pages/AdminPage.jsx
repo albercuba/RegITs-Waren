@@ -1,6 +1,13 @@
-import { Lock } from "lucide-react";
+import { Lock, Plus, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { getEmailSettings, getScanDebug, saveEmailSettings, testEmailSettings } from "../api.js";
+import {
+  getAdminLocations,
+  getEmailSettings,
+  getScanDebug,
+  saveEmailSettings,
+  saveLocations,
+  testEmailSettings,
+} from "../api.js";
 import SettingsForm from "../components/SettingsForm.jsx";
 
 const emptySettings = {
@@ -12,7 +19,6 @@ const emptySettings = {
   recipient_email: "",
   use_tls: true,
   password_configured: false,
-  locations: [],
 };
 
 function germanError(message) {
@@ -52,16 +58,20 @@ export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [settings, setSettings] = useState(emptySettings);
   const [status, setStatus] = useState(null);
+  const [locationsStatus, setLocationsStatus] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [locations, setLocations] = useState([]);
   const [debugId, setDebugId] = useState("");
   const [debugData, setDebugData] = useState(null);
 
   async function unlock() {
     setBusy(true);
     setStatus(null);
+    setLocationsStatus(null);
     try {
-      const data = await getEmailSettings(adminPassword);
+      const [data, locationData] = await Promise.all([getEmailSettings(adminPassword), getAdminLocations(adminPassword)]);
       setSettings({ ...emptySettings, ...data, smtp_password: "" });
+      setLocations(locationData.locations || []);
       setUnlocked(true);
     } catch (error) {
       setStatus({ type: "error", message: germanError(error.message) });
@@ -104,6 +114,32 @@ export default function AdminPage() {
       setStatus({ type: "success", message: "Test-E-Mail gesendet" });
     } catch (error) {
       setStatus({ type: "error", message: germanError(error.message) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function addLocation() {
+    setLocations((current) => [...current, ""]);
+  }
+
+  function updateLocation(index, value) {
+    setLocations((current) => current.map((location, currentIndex) => (currentIndex === index ? value : location)));
+  }
+
+  function removeLocation(index) {
+    setLocations((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  }
+
+  async function handleSaveLocations() {
+    setBusy(true);
+    setLocationsStatus(null);
+    try {
+      const saved = await saveLocations(adminPassword, locations);
+      setLocations(saved.locations || []);
+      setLocationsStatus({ type: "success", message: "Standorte gespeichert" });
+    } catch (error) {
+      setLocationsStatus({ type: "error", message: germanError(error.message) });
     } finally {
       setBusy(false);
     }
@@ -158,6 +194,38 @@ export default function AdminPage() {
             settings={settings}
             status={status}
           />
+          <section className="panel form-panel">
+            <div className="section-title">
+              <p className="eyebrow">Wareneingang</p>
+              <h2>Standorte</h2>
+            </div>
+            <div className="location-list">
+              {locations.map((location, index) => (
+                <div className="location-row" key={`location-${index}`}>
+                  <label>
+                    <span>Standort {index + 1}</span>
+                    <input value={location} onChange={(event) => updateLocation(index, event.target.value)} />
+                  </label>
+                  <button className="icon-button" onClick={() => removeLocation(index)} title="Standort entfernen" type="button">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="settings-actions">
+              <button className="button secondary" disabled={busy} onClick={addLocation} type="button">
+                <Plus size={20} />
+                <span>Standort hinzufügen</span>
+              </button>
+              <button className="button primary" disabled={busy} onClick={handleSaveLocations} type="button">
+                <Save size={20} />
+                <span>Standorte speichern</span>
+              </button>
+            </div>
+            {locationsStatus && (
+              <p className={locationsStatus.type === "error" ? "status error" : "status success"}>{locationsStatus.message}</p>
+            )}
+          </section>
           <section className="panel form-panel">
             <div className="section-title">
               <p className="eyebrow">OCR Debug</p>

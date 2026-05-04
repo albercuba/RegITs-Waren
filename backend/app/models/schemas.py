@@ -33,3 +33,11 @@ class EmailSettingsOut(BaseModel):
     use_tls: bool = True
     password_configured: bool = False
     locations: list[str] = Field(default_factory=list)
+
+
+class LocationsIn(BaseModel):
+    locations: list[str] = Field(default_factory=list)
+
+
+class LocationsOut(BaseModel):
+    locations: list[str] = Field(default_factory=list)
