@@ -50,13 +50,6 @@ export default function App() {
       </header>
 
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">RW</span>
-          <div>
-            <strong>RegITs-Waren</strong>
-            <small>Hardware Wareneingang</small>
-          </div>
-        </div>
         <nav>
           {navItems.map((item) => {
             const Icon = item.icon;

@@ -197,7 +197,6 @@ export default function IntakePage() {
   return (
     <div className="page intake-page">
       <header className="mobile-header">
-        <p className="eyebrow">RegITs-Waren</p>
         <h1>Wareneingang</h1>
       </header>
 
