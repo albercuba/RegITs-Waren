@@ -12,6 +12,11 @@ from app.services.security import decrypt_secret, encrypt_secret, require_admin
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
+def _smtp_error_detail(prefix: str, exc: Exception) -> str:
+    message = str(exc).strip()
+    return f"{prefix}: {message}" if message else prefix
+
+
 def _parse_locations(value: str | None) -> list[str]:
     if not value:
         return []
@@ -106,9 +111,9 @@ def save_email_settings(payload: EmailSettingsIn) -> EmailSettingsOut:
     try:
         validate_smtp(settings)
     except smtplib.SMTPAuthenticationError as exc:
-        raise HTTPException(status_code=400, detail="Authentifizierung fehlgeschlagen") from exc
+        raise HTTPException(status_code=400, detail=_smtp_error_detail("Authentifizierung fehlgeschlagen", exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="SMTP-Verbindung fehlgeschlagen") from exc
+        raise HTTPException(status_code=400, detail=_smtp_error_detail("SMTP-Verbindung fehlgeschlagen", exc)) from exc
 
     encrypted_password = encrypt_secret(payload.smtp_password or existing_password)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -157,7 +162,7 @@ def test_email_settings(payload: EmailSettingsIn) -> dict[str, str]:
     try:
         send_test_email(settings)
     except smtplib.SMTPAuthenticationError as exc:
-        raise HTTPException(status_code=400, detail="Authentifizierung fehlgeschlagen") from exc
+        raise HTTPException(status_code=400, detail=_smtp_error_detail("Authentifizierung fehlgeschlagen", exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="SMTP-Verbindung fehlgeschlagen") from exc
+        raise HTTPException(status_code=400, detail=_smtp_error_detail("SMTP-Verbindung fehlgeschlagen", exc)) from exc
     return {"message": "Test-E-Mail gesendet"}

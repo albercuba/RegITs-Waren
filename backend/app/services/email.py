@@ -1,4 +1,5 @@
 import smtplib
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -46,14 +47,23 @@ def _german_datetime(value: str) -> str:
     return parsed.astimezone(timezone.utc).strftime("%d.%m.%Y, %H:%M Uhr")
 
 
-def validate_smtp(settings: SmtpSettings) -> None:
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
+@contextmanager
+def _smtp_connection(settings: SmtpSettings):
+    use_implicit_tls = settings.use_tls and settings.smtp_port == 465
+    smtp_class = smtplib.SMTP_SSL if use_implicit_tls else smtplib.SMTP
+    with smtp_class(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
         smtp.ehlo()
-        if settings.use_tls:
+        if settings.use_tls and not use_implicit_tls:
             smtp.starttls()
             smtp.ehlo()
         if settings.smtp_username:
             smtp.login(settings.smtp_username, settings.smtp_password)
+        yield smtp
+
+
+def validate_smtp(settings: SmtpSettings) -> None:
+    with _smtp_connection(settings):
+        pass
 
 
 def settings_from_payload(payload: EmailSettingsIn) -> SmtpSettings:
@@ -109,14 +119,7 @@ def send_intake_email(metadata: IntakeMetadata, image_paths: list[Path], created
 
 
 def _send_message(settings: SmtpSettings, message: EmailMessage) -> None:
-    validate_smtp(settings)
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
-        smtp.ehlo()
-        if settings.use_tls:
-            smtp.starttls()
-            smtp.ehlo()
-        if settings.smtp_username:
-            smtp.login(settings.smtp_username, settings.smtp_password)
+    with _smtp_connection(settings) as smtp:
         smtp.send_message(message)
 
 
