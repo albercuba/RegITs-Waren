@@ -33,7 +33,7 @@ export default function PhotoCapture({ photos, activePhotoId, onFileChange, onRe
         <label className="button primary">
           <Camera size={20} />
           <span>{hasPhotos ? "Foto hinzufügen" : "Kamera öffnen"}</span>
-          <input accept="image/*" capture="environment" hidden onChange={onFileChange} type="file" />
+          <input accept="image/*" capture="environment" hidden multiple onChange={onFileChange} type="file" />
         </label>
         {hasPhotos && (
           <>

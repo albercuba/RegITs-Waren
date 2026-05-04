@@ -41,7 +41,7 @@ export default function IntakePage() {
   const [photos, setPhotos] = useState([]);
   const [activePhotoId, setActivePhotoId] = useState("");
   const [message, setMessage] = useState(null);
-  const [scanning, setScanning] = useState(false);
+  const [scanningPhotoIds, setScanningPhotoIds] = useState([]);
   const [sending, setSending] = useState(false);
   const [locations, setLocations] = useState([]);
   const [defaultReceivedBy, setDefaultReceivedBy] = useState("");
@@ -51,6 +51,7 @@ export default function IntakePage() {
   const activePhotoIndex = activePhoto ? photos.findIndex((photo) => photo.id === activePhoto.id) : -1;
   const activeForm = activePhoto?.form || emptyForm;
   const activeOcrStatus = activePhoto?.ocrStatus || "Manuelle Eingabe erforderlich";
+  const scanning = scanningPhotoIds.length > 0;
   const canSend = useMemo(
     () => photos.length > 0 && photos.every((photo) => photo.form.asset_type && (photo.form.serial_number || photo.form.notes)),
     [photos]
@@ -120,7 +121,7 @@ export default function IntakePage() {
   }
 
   async function scanSelectedPhoto(file, photoId) {
-    setScanning(true);
+    setScanningPhotoIds((current) => (current.includes(photoId) ? current : [...current, photoId]));
     updatePhotoOcrStatus(photoId, "Etikett wird gescannt...");
     setMessage(null);
     try {
@@ -138,7 +139,7 @@ export default function IntakePage() {
       updatePhotoOcrStatus(photoId, "Manuelle Eingabe erforderlich");
       setMessage({ type: "error", text: germanError(error.message) });
     } finally {
-      setScanning(false);
+      setScanningPhotoIds((current) => current.filter((id) => id !== photoId));
     }
   }
 
@@ -146,16 +147,18 @@ export default function IntakePage() {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
     const nextPhotos = files.map((file) => ({
-        id: createPhotoId(),
-        file,
-        previewUrl: URL.createObjectURL(file),
-        form: { ...emptyForm, received_by: defaultReceivedBy, location: defaultLocation },
-        ocrStatus: "Manuelle Eingabe erforderlich",
-      }));
+      id: createPhotoId(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      form: { ...emptyForm, received_by: defaultReceivedBy, location: defaultLocation },
+      ocrStatus: "Wartet auf Scan...",
+    }));
     setPhotos((current) => [...current, ...nextPhotos]);
     setActivePhotoId(nextPhotos[0].id);
     event.target.value = "";
-    scanSelectedPhoto(nextPhotos[0].file, nextPhotos[0].id);
+    nextPhotos.forEach((photo) => {
+      scanSelectedPhoto(photo.file, photo.id);
+    });
   }
 
   function removePhoto(id) {
@@ -169,9 +172,7 @@ export default function IntakePage() {
   }
 
   async function handleScan() {
-    for (const photo of photos) {
-      await scanSelectedPhoto(photo.file, photo.id);
-    }
+    await Promise.all(photos.map((photo) => scanSelectedPhoto(photo.file, photo.id)));
   }
 
   async function handleSubmit() {
