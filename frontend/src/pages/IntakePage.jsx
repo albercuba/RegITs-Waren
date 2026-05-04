@@ -45,6 +45,7 @@ export default function IntakePage() {
   const [sending, setSending] = useState(false);
   const [locations, setLocations] = useState([]);
   const [defaultReceivedBy, setDefaultReceivedBy] = useState("");
+  const [defaultLocation, setDefaultLocation] = useState("");
 
   const activePhoto = photos.find((photo) => photo.id === activePhotoId) || photos[0] || null;
   const activePhotoIndex = activePhoto ? photos.findIndex((photo) => photo.id === activePhoto.id) : -1;
@@ -97,12 +98,20 @@ export default function IntakePage() {
 
   function handleActiveFormChange(nextForm) {
     if (!activePhoto) return;
+    const sharedUpdates = {};
     if (nextForm.received_by !== activePhoto.form.received_by) {
       setDefaultReceivedBy(nextForm.received_by);
+      sharedUpdates.received_by = nextForm.received_by;
+    }
+    if (nextForm.location !== activePhoto.form.location) {
+      setDefaultLocation(nextForm.location);
+      sharedUpdates.location = nextForm.location;
+    }
+    if (Object.keys(sharedUpdates).length > 0) {
       setPhotos((current) =>
         current.map((photo) => ({
           ...photo,
-          form: photo.id === activePhoto.id ? nextForm : { ...photo.form, received_by: nextForm.received_by },
+          form: photo.id === activePhoto.id ? nextForm : { ...photo.form, ...sharedUpdates },
         }))
       );
       return;
@@ -140,7 +149,7 @@ export default function IntakePage() {
         id: createPhotoId(),
         file,
         previewUrl: URL.createObjectURL(file),
-        form: { ...emptyForm, received_by: defaultReceivedBy },
+        form: { ...emptyForm, received_by: defaultReceivedBy, location: defaultLocation },
         ocrStatus: "Manuelle Eingabe erforderlich",
       }));
     setPhotos((current) => [...current, ...nextPhotos]);
