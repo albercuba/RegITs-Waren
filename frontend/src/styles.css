@@ -297,12 +297,32 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   padding: 8px;
 }
 
-.photo-tile img {
+.photo-tile.active {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(54, 165, 234, 0.14);
+}
+
+.photo-select {
+  display: grid;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text2);
+  padding: 0;
+  text-align: left;
+  font-weight: 700;
+}
+
+.photo-select img {
   aspect-ratio: 4 / 3;
   max-height: none;
   border-radius: calc(var(--r) - 2px);
   background: var(--bg3);
   object-fit: contain;
+}
+
+.photo-select span {
+  padding: 0 2px;
 }
 
 .photo-remove {

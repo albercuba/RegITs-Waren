@@ -38,13 +38,18 @@ function createPhotoId() {
 
 export default function IntakePage() {
   const [photos, setPhotos] = useState([]);
-  const [form, setForm] = useState(emptyForm);
-  const [ocrStatus, setOcrStatus] = useState("Manuelle Eingabe erforderlich");
+  const [activePhotoId, setActivePhotoId] = useState("");
   const [message, setMessage] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const canSend = useMemo(() => Boolean(photos.length && form.asset_type && (form.serial_number || form.notes)), [photos, form]);
+  const activePhoto = photos.find((photo) => photo.id === activePhotoId) || photos[0] || null;
+  const activeForm = activePhoto?.form || emptyForm;
+  const activeOcrStatus = activePhoto?.ocrStatus || "Manuelle Eingabe erforderlich";
+  const canSend = useMemo(
+    () => photos.length > 0 && photos.every((photo) => photo.form.asset_type && (photo.form.serial_number || photo.form.notes)),
+    [photos]
+  );
 
   function mergeDetectedFields(current, result) {
     const fields = result.fields || {};
@@ -63,14 +68,32 @@ export default function IntakePage() {
     };
   }
 
-  async function scanSelectedPhoto(file) {
+  function updatePhotoForm(photoId, updater) {
+    setPhotos((current) =>
+      current.map((photo) =>
+        photo.id === photoId
+          ? {
+              ...photo,
+              form: typeof updater === "function" ? updater(photo.form) : updater,
+            }
+          : photo
+      )
+    );
+  }
+
+  function updatePhotoOcrStatus(photoId, ocrStatus) {
+    setPhotos((current) => current.map((photo) => (photo.id === photoId ? { ...photo, ocrStatus } : photo)));
+  }
+
+  async function scanSelectedPhoto(file, photoId) {
     setScanning(true);
-    setOcrStatus("Etikett wird gescannt...");
+    updatePhotoOcrStatus(photoId, "Etikett wird gescannt...");
     setMessage(null);
     try {
       const result = await scanPhoto(file);
-      setForm((current) => mergeDetectedFields(current, result));
-      setOcrStatus(
+      updatePhotoForm(photoId, (current) => mergeDetectedFields(current, result));
+      updatePhotoOcrStatus(
+        photoId,
         result.serial_debug?.needs_confirmation
           ? "Seriennummer bitte prüfen"
           : result.status === "fields_detected"
@@ -78,7 +101,7 @@ export default function IntakePage() {
             : "Manuelle Eingabe erforderlich"
       );
     } catch (error) {
-      setOcrStatus("Manuelle Eingabe erforderlich");
+      updatePhotoOcrStatus(photoId, "Manuelle Eingabe erforderlich");
       setMessage({ type: "error", text: germanError(error.message) });
     } finally {
       setScanning(false);
@@ -88,16 +111,17 @@ export default function IntakePage() {
   function handleFileChange(event) {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
-    setPhotos((current) => [
-      ...current,
-      ...files.map((file) => ({
+    const nextPhotos = files.map((file) => ({
         id: createPhotoId(),
         file,
         previewUrl: URL.createObjectURL(file),
-      })),
-    ]);
+        form: { ...emptyForm },
+        ocrStatus: "Manuelle Eingabe erforderlich",
+      }));
+    setPhotos((current) => [...current, ...nextPhotos]);
+    setActivePhotoId(nextPhotos[0].id);
     event.target.value = "";
-    scanSelectedPhoto(files[0]);
+    scanSelectedPhoto(nextPhotos[0].file, nextPhotos[0].id);
   }
 
   function removePhoto(id) {
@@ -105,14 +129,14 @@ export default function IntakePage() {
       const target = current.find((photo) => photo.id === id);
       if (target) URL.revokeObjectURL(target.previewUrl);
       const next = current.filter((photo) => photo.id !== id);
-      if (next.length === 0) setOcrStatus("Manuelle Eingabe erforderlich");
+      if (activePhotoId === id) setActivePhotoId(next[0]?.id || "");
       return next;
     });
   }
 
   async function handleScan() {
     for (const photo of photos) {
-      await scanSelectedPhoto(photo.file);
+      await scanSelectedPhoto(photo.file, photo.id);
     }
   }
 
@@ -121,12 +145,14 @@ export default function IntakePage() {
     setSending(true);
     setMessage(null);
     try {
-      const result = await createSubmission(form, photos.map((photo) => photo.file));
-      setMessage({ type: "success", text: `Eintrag #${result.id} gesendet` });
-      setForm(emptyForm);
+      const results = [];
+      for (const photo of photos) {
+        results.push(await createSubmission(photo.form, [photo.file]));
+      }
+      setMessage({ type: "success", text: `${results.length} Eintraege gesendet` });
       photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
       setPhotos([]);
-      setOcrStatus("Manuelle Eingabe erforderlich");
+      setActivePhotoId("");
     } catch (error) {
       setMessage({ type: "error", text: germanError(error.message) });
     } finally {
@@ -143,16 +169,22 @@ export default function IntakePage() {
 
       <PhotoCapture
         disabled={!photos.length}
+        activePhotoId={activePhotoId}
         onFileChange={handleFileChange}
         onRemovePhoto={removePhoto}
         onScan={handleScan}
+        onSelectPhoto={setActivePhotoId}
         photos={photos}
         scanning={scanning}
       />
 
       {message && <section className={message.type === "error" ? "notice error" : "notice success"}>{message.text}</section>}
 
-      <FormFields form={form} ocrStatus={ocrStatus} onChange={setForm} />
+      <FormFields
+        form={activeForm}
+        ocrStatus={activePhoto ? activeOcrStatus : "Bitte zuerst ein Foto aufnehmen"}
+        onChange={(nextForm) => activePhoto && updatePhotoForm(activePhoto.id, nextForm)}
+      />
 
       <SendButton disabled={!canSend} onClick={handleSubmit} sending={sending} />
     </div>

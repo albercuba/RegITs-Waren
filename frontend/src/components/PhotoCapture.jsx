@@ -1,6 +1,6 @@
 import { Camera, RotateCcw, ScanLine } from "lucide-react";
 
-export default function PhotoCapture({ photos, onFileChange, onRemovePhoto, onScan, scanning, disabled }) {
+export default function PhotoCapture({ photos, activePhotoId, onFileChange, onRemovePhoto, onScan, onSelectPhoto, scanning, disabled }) {
   const hasPhotos = photos.length > 0;
 
   return (
@@ -9,8 +9,11 @@ export default function PhotoCapture({ photos, onFileChange, onRemovePhoto, onSc
         {hasPhotos ? (
           <div className="photo-grid">
             {photos.map((photo, index) => (
-              <article className="photo-tile" key={photo.id}>
-                <img alt={`Vorschau der erhaltenen Hardware ${index + 1}`} src={photo.previewUrl} />
+              <article className={photo.id === activePhotoId ? "photo-tile active" : "photo-tile"} key={photo.id}>
+                <button className="photo-select" onClick={() => onSelectPhoto(photo.id)} type="button">
+                  <img alt={`Vorschau der erhaltenen Hardware ${index + 1}`} src={photo.previewUrl} />
+                  <span>Paket {index + 1}</span>
+                </button>
                 <button className="photo-remove" onClick={() => onRemovePhoto(photo.id)} type="button">
                   <RotateCcw size={16} />
                   <span>Entfernen</span>
