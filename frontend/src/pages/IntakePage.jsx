@@ -44,6 +44,7 @@ export default function IntakePage() {
   const [sending, setSending] = useState(false);
 
   const activePhoto = photos.find((photo) => photo.id === activePhotoId) || photos[0] || null;
+  const activePhotoIndex = activePhoto ? photos.findIndex((photo) => photo.id === activePhoto.id) : -1;
   const activeForm = activePhoto?.form || emptyForm;
   const activeOcrStatus = activePhoto?.ocrStatus || "Manuelle Eingabe erforderlich";
   const canSend = useMemo(
@@ -179,6 +180,8 @@ export default function IntakePage() {
       />
 
       {message && <section className={message.type === "error" ? "notice error" : "notice success"}>{message.text}</section>}
+
+      {activePhoto && <section className="status-strip package-status">Paket {activePhotoIndex + 1} wird bearbeitet</section>}
 
       <FormFields
         form={activeForm}
