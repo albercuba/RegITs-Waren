@@ -7,6 +7,7 @@ class IntakeMetadata(BaseModel):
     vendor: str = ""
     model: str = ""
     received_by: str = ""
+    location: str = ""
     notes: str = ""
     raw_text: str = ""
     detected_candidates: str = ""
@@ -20,6 +21,7 @@ class EmailSettingsIn(BaseModel):
     sender_email: EmailStr
     recipient_email: EmailStr
     use_tls: bool = True
+    locations: list[str] = Field(default_factory=list)
 
 
 class EmailSettingsOut(BaseModel):
@@ -30,3 +32,4 @@ class EmailSettingsOut(BaseModel):
     recipient_email: str = ""
     use_tls: bool = True
     password_configured: bool = False
+    locations: list[str] = Field(default_factory=list)

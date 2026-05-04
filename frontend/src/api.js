@@ -38,6 +38,11 @@ export async function getSubmissions() {
   return parseResponse(response);
 }
 
+export async function getLocations() {
+  const response = await fetch(`${API_BASE}/locations`);
+  return parseResponse(response);
+}
+
 export async function getEmailSettings(adminPassword) {
   const response = await fetch(`${API_BASE}/admin/email-settings`, {
     headers: { "X-Admin-Password": adminPassword },

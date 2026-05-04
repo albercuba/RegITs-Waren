@@ -46,6 +46,18 @@ def _save_upload(upload: UploadFile, prefix: str) -> Path:
     return target
 
 
+def _parse_locations(value: str | None) -> list[str]:
+    if not value:
+        return []
+    try:
+        locations = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(locations, list):
+        return []
+    return [str(location).strip() for location in locations if str(location).strip()]
+
+
 def _store_scan_debug(path: Path, result: dict) -> int:
     with get_db() as conn:
         cursor = conn.execute(
@@ -101,6 +113,13 @@ def get_scan_debug(debug_id: int) -> dict:
     return data
 
 
+@router.get("/locations")
+def list_locations() -> list[str]:
+    with get_db() as conn:
+        row = conn.execute("SELECT locations FROM email_settings WHERE id = 1").fetchone()
+    return _parse_locations(row["locations"] if row else "")
+
+
 @router.post("/submissions")
 def create_submission(metadata: str = Form(...), photos: list[UploadFile] = File(...)) -> dict:
     try:
@@ -118,10 +137,10 @@ def create_submission(metadata: str = Form(...), photos: list[UploadFile] = File
         cursor = conn.execute(
             """
             INSERT INTO submissions (
-                created_at, serial_number, asset_type, vendor, model, received_by, notes, image_path,
+                created_at, serial_number, asset_type, vendor, model, received_by, location, notes, image_path,
                 raw_text, detected_candidates, user_corrected_serial, image_paths
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 created_at,
@@ -130,6 +149,7 @@ def create_submission(metadata: str = Form(...), photos: list[UploadFile] = File
                 payload.vendor,
                 payload.model,
                 payload.received_by,
+                payload.location,
                 payload.notes,
                 str(primary_image_path),
                 payload.raw_text,

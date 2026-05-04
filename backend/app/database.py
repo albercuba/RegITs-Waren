@@ -44,6 +44,7 @@ def init_db() -> None:
         _ensure_column(conn, "submissions", "detected_candidates", "TEXT")
         _ensure_column(conn, "submissions", "user_corrected_serial", "TEXT")
         _ensure_column(conn, "submissions", "image_paths", "TEXT")
+        _ensure_column(conn, "submissions", "location", "TEXT")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS email_settings (
@@ -59,6 +60,7 @@ def init_db() -> None:
             )
             """
         )
+        _ensure_column(conn, "email_settings", "locations", "TEXT")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS serial_patterns (

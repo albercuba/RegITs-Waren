@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 import smtplib
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,6 +10,30 @@ from app.services.email import send_test_email, settings_from_payload, validate_
 from app.services.security import decrypt_secret, encrypt_secret, require_admin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+
+
+def _parse_locations(value: str | None) -> list[str]:
+    if not value:
+        return []
+    try:
+        locations = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(locations, list):
+        return []
+    return [str(location).strip() for location in locations if str(location).strip()]
+
+
+def _clean_locations(locations: list[str]) -> list[str]:
+    cleaned = []
+    seen = set()
+    for location in locations:
+        value = str(location).strip()
+        key = value.casefold()
+        if value and key not in seen:
+            cleaned.append(value)
+            seen.add(key)
+    return cleaned
 
 
 def _public_settings(row) -> EmailSettingsOut:
@@ -22,6 +47,7 @@ def _public_settings(row) -> EmailSettingsOut:
         recipient_email=row["recipient_email"],
         use_tls=bool(row["use_tls"]),
         password_configured=bool(row["smtp_password_encrypted"]),
+        locations=_parse_locations(row["locations"]),
     )
 
 
@@ -50,15 +76,16 @@ def save_email_settings(payload: EmailSettingsIn) -> EmailSettingsOut:
         raise HTTPException(status_code=400, detail="SMTP-Verbindung fehlgeschlagen") from exc
 
     encrypted_password = encrypt_secret(payload.smtp_password or existing_password)
+    locations = json.dumps(_clean_locations(payload.locations), ensure_ascii=False)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with get_db() as conn:
         conn.execute(
             """
             INSERT INTO email_settings (
                 id, smtp_host, smtp_port, smtp_username, smtp_password_encrypted,
-                sender_email, recipient_email, use_tls, updated_at
+                sender_email, recipient_email, use_tls, updated_at, locations
             )
-            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 smtp_host = excluded.smtp_host,
                 smtp_port = excluded.smtp_port,
@@ -67,7 +94,8 @@ def save_email_settings(payload: EmailSettingsIn) -> EmailSettingsOut:
                 sender_email = excluded.sender_email,
                 recipient_email = excluded.recipient_email,
                 use_tls = excluded.use_tls,
-                updated_at = excluded.updated_at
+                updated_at = excluded.updated_at,
+                locations = excluded.locations
             """,
             (
                 payload.smtp_host,
@@ -78,6 +106,7 @@ def save_email_settings(payload: EmailSettingsIn) -> EmailSettingsOut:
                 str(payload.recipient_email),
                 int(payload.use_tls),
                 now,
+                locations,
             ),
         )
         row = conn.execute("SELECT * FROM email_settings WHERE id = 1").fetchone()

@@ -97,6 +97,7 @@ def send_intake_email(metadata: IntakeMetadata, image_paths: list[Path], created
             f"Hersteller: {metadata.vendor}",
             f"Modell: {metadata.model}",
             f"Angenommen von: {metadata.received_by}",
+            f"Standort: {metadata.location}",
             f"Notizen: {metadata.notes}",
         ]
     )

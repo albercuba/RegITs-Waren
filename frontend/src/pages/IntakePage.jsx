@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { createSubmission, scanPhoto } from "../api.js";
+import { useEffect, useMemo, useState } from "react";
+import { createSubmission, getLocations, scanPhoto } from "../api.js";
 import FormFields from "../components/FormFields.jsx";
 import PhotoCapture from "../components/PhotoCapture.jsx";
 import SendButton from "../components/SendButton.jsx";
@@ -10,6 +10,7 @@ const emptyForm = {
   vendor: "",
   model: "",
   received_by: "",
+  location: "",
   notes: "",
   raw_text: "",
   detected_candidates: "",
@@ -42,6 +43,7 @@ export default function IntakePage() {
   const [message, setMessage] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [sending, setSending] = useState(false);
+  const [locations, setLocations] = useState([]);
 
   const activePhoto = photos.find((photo) => photo.id === activePhotoId) || photos[0] || null;
   const activePhotoIndex = activePhoto ? photos.findIndex((photo) => photo.id === activePhoto.id) : -1;
@@ -51,6 +53,12 @@ export default function IntakePage() {
     () => photos.length > 0 && photos.every((photo) => photo.form.asset_type && (photo.form.serial_number || photo.form.notes)),
     [photos]
   );
+
+  useEffect(() => {
+    getLocations()
+      .then((data) => setLocations(Array.isArray(data) ? data : []))
+      .catch(() => setLocations([]));
+  }, []);
 
   function mergeDetectedFields(current, result) {
     const fields = result.fields || {};
@@ -185,6 +193,7 @@ export default function IntakePage() {
 
       <FormFields
         form={activeForm}
+        locations={locations}
         ocrStatus={activePhoto ? activeOcrStatus : "Bitte zuerst ein Foto aufnehmen"}
         onChange={(nextForm) => activePhoto && updatePhotoForm(activePhoto.id, nextForm)}
       />

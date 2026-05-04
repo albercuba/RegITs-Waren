@@ -437,6 +437,10 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   border-bottom: 1px solid var(--border);
 }
 
+.settings-subsection {
+  margin-top: 8px;
+}
+
 label {
   display: grid;
   gap: 8px;

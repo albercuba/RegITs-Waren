@@ -12,6 +12,7 @@ const emptySettings = {
   recipient_email: "",
   use_tls: true,
   password_configured: false,
+  locations: [],
 };
 
 function germanError(message) {
