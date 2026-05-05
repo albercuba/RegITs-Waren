@@ -15,6 +15,7 @@ The most important extracted field is the serial number. Scan behavior should fa
 - Avoid confusing serial numbers with part numbers, article numbers, model numbers, MAC addresses, EAN/GTIN/UPC barcodes, quantities, or regulatory identifiers.
 - For UniFi/Ubiquiti labels, prefer the parenthesized identifier pattern such as `(AK)58D61F517119` or `(RX)847848C64FB6`; model strings such as `USW-Lite-8-PoE` and `U7-LR` must never become serial numbers.
 - Keep OCR fallback work limited to uncertain cases so normal scans stay quick.
+- Keep the optional frontend crop flow for OCR: cropped images may be sent to `/api/scan`, but the original photo should remain available for submission storage and email attachments.
 - Preserve manual correction paths; users must always be able to fix OCR results before submitting.
 - Preserve the multi-photo intake workflow: each photo is a separate package, while session-wide fields such as `Angenommen von` and `Standort` should remain easy to reuse across the batch.
 
