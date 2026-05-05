@@ -16,10 +16,17 @@ async function parseResponse(response) {
   return data;
 }
 
-export async function scanPhoto(photo) {
+export async function scanPhoto(photo, options = {}) {
   const formData = new FormData();
   formData.append("photo", photo);
-  const response = await fetch(`${API_BASE}/scan`, { method: "POST", body: formData });
+  if (options.ocrCropped) {
+    formData.append("ocr_cropped", "true");
+  }
+  const response = await fetch(`${API_BASE}/scan`, {
+    method: "POST",
+    headers: options.ocrCropped ? { "X-OCR-Cropped": "true" } : undefined,
+    body: formData,
+  });
   return parseResponse(response);
 }
 

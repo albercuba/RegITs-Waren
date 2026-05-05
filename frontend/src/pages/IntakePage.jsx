@@ -120,12 +120,12 @@ export default function IntakePage() {
     updatePhotoForm(activePhoto.id, nextForm);
   }
 
-  async function scanSelectedPhoto(file, photoId) {
+  async function scanSelectedPhoto(ocrImageFile, photoId, ocrCropped = false) {
     setScanningPhotoIds((current) => (current.includes(photoId) ? current : [...current, photoId]));
-    updatePhotoOcrStatus(photoId, "Etikett wird gescannt...");
+    updatePhotoOcrStatus(photoId, ocrCropped ? "Zugeschnittenes Etikett wird gescannt..." : "Etikett wird gescannt...");
     setMessage(null);
     try {
-      const result = await scanPhoto(file);
+      const result = await scanPhoto(ocrImageFile, { ocrCropped });
       updatePhotoForm(photoId, (current) => mergeDetectedFields(current, result));
       updatePhotoOcrStatus(
         photoId,
@@ -143,22 +143,39 @@ export default function IntakePage() {
     }
   }
 
+  function createPhotoFromFile(file) {
+    return {
+      id: createPhotoId(),
+      originalImageFile: file,
+      croppedImageFile: null,
+      previewUrl: URL.createObjectURL(file),
+      form: { ...emptyForm, received_by: defaultReceivedBy, location: defaultLocation },
+      ocrStatus: "Labelbereich auswaehlen oder ohne Zuschnitt scannen",
+    };
+  }
+
   function handleFileChange(event) {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
-    const nextPhotos = files.map((file) => ({
-      id: createPhotoId(),
-      file,
-      previewUrl: URL.createObjectURL(file),
-      form: { ...emptyForm, received_by: defaultReceivedBy, location: defaultLocation },
-      ocrStatus: "Wartet auf Scan...",
-    }));
+    const nextPhotos = files.map(createPhotoFromFile);
     setPhotos((current) => [...current, ...nextPhotos]);
     setActivePhotoId(nextPhotos[0].id);
     event.target.value = "";
-    nextPhotos.forEach((photo) => {
-      scanSelectedPhoto(photo.file, photo.id);
-    });
+  }
+
+  function handleRetakePhoto(photoId, event) {
+    const [file] = Array.from(event.target.files || []);
+    if (!file) return;
+    const nextPhoto = createPhotoFromFile(file);
+    setPhotos((current) =>
+      current.map((photo) => {
+        if (photo.id !== photoId) return photo;
+        URL.revokeObjectURL(photo.previewUrl);
+        return { ...nextPhoto, form: photo.form };
+      })
+    );
+    setActivePhotoId(nextPhoto.id);
+    event.target.value = "";
   }
 
   function removePhoto(id) {
@@ -172,7 +189,30 @@ export default function IntakePage() {
   }
 
   async function handleScan() {
-    await Promise.all(photos.map((photo) => scanSelectedPhoto(photo.file, photo.id)));
+    await Promise.all(
+      photos.map((photo) => {
+        const ocrImageFile = photo.croppedImageFile ?? photo.originalImageFile;
+        return scanSelectedPhoto(ocrImageFile, photo.id, Boolean(photo.croppedImageFile));
+      })
+    );
+  }
+
+  async function handleScanOriginal(photoId) {
+    const photo = photos.find((currentPhoto) => currentPhoto.id === photoId);
+    if (!photo) return;
+    setPhotos((current) =>
+      current.map((currentPhoto) =>
+        currentPhoto.id === photoId ? { ...currentPhoto, croppedImageFile: null } : currentPhoto
+      )
+    );
+    await scanSelectedPhoto(photo.originalImageFile, photoId, false);
+  }
+
+  async function handleCropAndScan(photoId, croppedImageFile) {
+    setPhotos((current) =>
+      current.map((photo) => (photo.id === photoId ? { ...photo, croppedImageFile } : photo))
+    );
+    await scanSelectedPhoto(croppedImageFile, photoId, true);
   }
 
   async function handleSubmit() {
@@ -182,7 +222,7 @@ export default function IntakePage() {
     try {
       const results = [];
       for (const photo of photos) {
-        results.push(await createSubmission(photo.form, [photo.file]));
+        results.push(await createSubmission(photo.form, [photo.originalImageFile]));
       }
       setMessage({ type: "success", text: `${results.length} Eintraege gesendet` });
       photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
@@ -206,7 +246,10 @@ export default function IntakePage() {
         activePhotoId={activePhotoId}
         onFileChange={handleFileChange}
         onRemovePhoto={removePhoto}
+        onCropAndScan={handleCropAndScan}
+        onRetakePhoto={handleRetakePhoto}
         onScan={handleScan}
+        onScanOriginal={handleScanOriginal}
         onSelectPhoto={setActivePhotoId}
         photos={photos}
         scanning={scanning}

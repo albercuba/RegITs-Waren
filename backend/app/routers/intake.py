@@ -3,7 +3,7 @@ import uuid
 from io import BytesIO
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
 
@@ -89,15 +89,21 @@ def _parse_locations(value: str | None) -> list[str]:
     return [str(location).strip() for location in locations if str(location).strip()]
 
 
-def _store_scan_debug(path: Path, result: dict) -> int:
+def _is_truthy(value: str | bool | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "ja", "on"}
+
+
+def _store_scan_debug(path: Path, result: dict, ocr_cropped: bool = False) -> int:
     with get_db() as conn:
         cursor = conn.execute(
             """
             INSERT INTO scan_debug (
                 created_at, image_path, raw_text, normalized_text, barcodes, candidates,
-                best_guess_serial, confidence_score, fields
+                best_guess_serial, confidence_score, fields, ocr_cropped
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 utc_timestamp(),
@@ -109,24 +115,37 @@ def _store_scan_debug(path: Path, result: dict) -> int:
                 result.get("best_guess_serial", ""),
                 result.get("confidence_score", 0),
                 json.dumps(result.get("fields", {}), ensure_ascii=False),
+                1 if ocr_cropped else 0,
             ),
         )
         return cursor.lastrowid
 
 
 @router.post("/scan")
-def scan_label(photo: UploadFile = File(...)) -> dict:
+def scan_label(
+    photo: UploadFile = File(...),
+    ocr_cropped: str | None = Form(default=None),
+    x_ocr_cropped: str | None = Header(default=None, alias="X-OCR-Cropped"),
+) -> dict:
+    cropped = _is_truthy(ocr_cropped) or _is_truthy(x_ocr_cropped)
     path = _save_upload(photo, "scan")
     result = scan_image(path)
-    result["debug_id"] = _store_scan_debug(path, result)
+    result["ocr_cropped"] = cropped
+    result["debug_id"] = _store_scan_debug(path, result, cropped)
     return result
 
 
 @router.post("/scan/debug", dependencies=[Depends(require_admin)])
-def scan_label_debug(photo: UploadFile = File(...)) -> dict:
+def scan_label_debug(
+    photo: UploadFile = File(...),
+    ocr_cropped: str | None = Form(default=None),
+    x_ocr_cropped: str | None = Header(default=None, alias="X-OCR-Cropped"),
+) -> dict:
+    cropped = _is_truthy(ocr_cropped) or _is_truthy(x_ocr_cropped)
     path = _save_upload(photo, "scan-debug")
     result = scan_image(path)
-    result["debug_id"] = _store_scan_debug(path, result)
+    result["ocr_cropped"] = cropped
+    result["debug_id"] = _store_scan_debug(path, result, cropped)
     return result
 
 
@@ -139,6 +158,7 @@ def get_scan_debug(debug_id: int) -> dict:
     data = dict(row)
     for key in ("barcodes", "candidates", "fields"):
         data[key] = json.loads(data[key] or "[]" if key != "fields" else data[key] or "{}")
+    data["ocr_cropped"] = bool(data.get("ocr_cropped"))
     data["image_file"] = Path(data["image_path"]).name
     data["image_url"] = f"/api/uploads/{data['image_file']}"
     return data
