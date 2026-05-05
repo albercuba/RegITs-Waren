@@ -112,7 +112,7 @@ export default function FormFields({ form, onChange, ocrStatus, locations = [] }
           rows="4"
           value={form.notes}
           onChange={(event) => setField("notes", event.target.value)}
-          placeholder="Zustand, Zubehör, Standort..."
+          placeholder="Zustand, Zubehör..."
         />
       </label>
     </section>
