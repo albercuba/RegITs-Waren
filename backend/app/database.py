@@ -90,6 +90,7 @@ def init_db() -> None:
             )
             """
         )
+        _ensure_column(conn, "scan_debug", "ocr_cropped", "INTEGER NOT NULL DEFAULT 0")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS app_settings (

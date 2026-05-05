@@ -122,6 +122,32 @@ class ApiStartupTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("debug_id", response.json())
+        self.assertFalse(response.json()["ocr_cropped"])
+
+    def test_cropped_scan_metadata_is_accepted_and_stored(self) -> None:
+        with patch(
+            "app.routers.intake.scan_image",
+            return_value={
+                "fields": {},
+                "raw_text": "",
+                "serial_debug": {},
+                "barcodes": [],
+                "serial_candidates": [],
+            },
+        ):
+            response = self.client.post(
+                "/api/scan",
+                data={"ocr_cropped": "true"},
+                files={"photo": ("label.jpg", image_bytes(), "image/jpeg")},
+                headers={"X-OCR-Cropped": "true"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["ocr_cropped"])
+        debug_response = self.client.get(f"/api/scan/debug/{body['debug_id']}", headers=self.admin_headers)
+        self.assertEqual(debug_response.status_code, 200)
+        self.assertTrue(debug_response.json()["ocr_cropped"])
 
     def test_spoofed_image_upload_is_rejected(self) -> None:
         response = self.client.post(

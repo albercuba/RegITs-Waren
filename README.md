@@ -106,6 +106,10 @@ OCR Debug:
 
 Das Backend-Image installiert Tesseract OCR und zbar. Seriennummern werden mit label-aware Parsern und einer Kandidaten/Scoring-Pipeline erkannt.
 
+Nach dem Aufnehmen oder Hochladen eines Fotos zeigt die Wareneingang-Seite einen optionalen Zuschnitt fuer den Labelbereich. Mitarbeitende koennen den Rahmen enger um das Etikett ziehen und dann `Zuschneiden & scannen` auswaehlen. Das kann OCR schneller und genauer machen, weil Tesseract nur den relevanten Bildausschnitt verarbeitet. Mit `Ohne Zuschneiden scannen` bleibt der bisherige Ablauf erhalten und das komplette Foto wird erkannt.
+
+Der Zuschnitt wird nur fuer OCR verwendet. Das urspruengliche Foto bleibt fuer den finalen Wareneingangseintrag und den E-Mail-Anhang erhalten, soweit ein Foto eingereicht wird.
+
 Wichtige Regeln:
 
 - Explizite Labels wie `S/N`, `Serial`, `Seriennummer` gewinnen gegen generische Kandidaten
@@ -207,6 +211,7 @@ docker compose config
 ## Troubleshooting
 
 - Tesseract/OCR: Sicherstellen, dass `tesseract-ocr`, `tesseract-ocr-deu` und `tesseract-ocr-eng` installiert sind.
+- OCR erkennt Daten nicht: Foto neu aufnehmen oder den Rahmen enger um das eigentliche Etikett ziehen und erneut scannen.
 - Barcode/zbar: `pyzbar` benoetigt die zbar Runtime (`libzbar0` im Dockerfile).
 - SMTP: Port 465 nutzt implizites TLS, Port 587 typischerweise STARTTLS. Fehlermeldungen aus dem SMTP-Test werden im Admin-Bereich angezeigt.
 - HTTPS/Kamera: Mobile Browser erlauben Kamera-Uploads am zuverlaessigsten ueber HTTPS oder `localhost`.

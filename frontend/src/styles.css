@@ -267,6 +267,12 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   object-fit: contain;
 }
 
+.photo-stack {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+}
+
 .photo-grid {
   display: grid;
   width: 100%;
@@ -332,6 +338,138 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   color: var(--text2);
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.crop-panel {
+  display: grid;
+  gap: 10px;
+  margin: 0 10px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg2);
+  padding: 10px;
+}
+
+.crop-heading {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  color: var(--text2);
+}
+
+.crop-heading svg {
+  color: var(--accent);
+}
+
+.crop-heading strong,
+.crop-heading span {
+  display: block;
+}
+
+.crop-heading strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.crop-heading span {
+  margin-top: 3px;
+  color: var(--text3);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.crop-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--r) - 2px);
+  background: #111;
+  touch-action: none;
+  user-select: none;
+}
+
+.crop-frame img {
+  display: block;
+  width: 100%;
+  max-height: 52vh;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.crop-box {
+  position: absolute;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.48);
+  cursor: move;
+  touch-action: none;
+}
+
+.crop-box::before,
+.crop-box::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.crop-box::before {
+  top: 33.333%;
+  bottom: 33.333%;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.crop-box::after {
+  left: 33.333%;
+  right: 33.333%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.crop-handle {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--accent2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+  touch-action: none;
+}
+
+.crop-handle.nw {
+  top: -14px;
+  left: -14px;
+  cursor: nwse-resize;
+}
+
+.crop-handle.ne {
+  top: -14px;
+  right: -14px;
+  cursor: nesw-resize;
+}
+
+.crop-handle.sw {
+  bottom: -14px;
+  left: -14px;
+  cursor: nesw-resize;
+}
+
+.crop-handle.se {
+  right: -14px;
+  bottom: -14px;
+  cursor: nwse-resize;
+}
+
+.crop-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.crop-actions .button {
+  min-height: 44px;
+  margin-bottom: 0;
 }
 
 .empty-preview {
@@ -775,6 +913,10 @@ textarea { resize: vertical; }
 
   .photo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crop-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .photo-actions > .button:only-child {
