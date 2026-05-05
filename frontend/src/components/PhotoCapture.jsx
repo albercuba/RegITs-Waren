@@ -186,6 +186,12 @@ export default function PhotoCapture({
   const hasPhotos = photos.length > 0;
   const selectedPhotoId = activePhotoId || photos[0]?.id || "";
   const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId) || photos[0] || null;
+  const scannedPhotoCount = photos.filter(
+    (photo) =>
+      !photo.ocrStatus.includes("Wartet") &&
+      !photo.ocrStatus.includes("auswaehlen") &&
+      !photo.ocrStatus.includes("wird gescannt")
+  ).length;
 
   return (
     <section className={hasPhotos ? "photo-card has-preview" : "photo-card is-empty"}>
@@ -232,7 +238,7 @@ export default function PhotoCapture({
         {hasPhotos && (
           <button className="button secondary" disabled={disabled || scanning} onClick={onScan} type="button">
             <ScanLine size={20} />
-            <span>{scanning ? "Scanne..." : "Alle scannen"}</span>
+            <span>{scanning ? `Scanne ${scannedPhotoCount}/${photos.length}` : "Alle scannen"}</span>
           </button>
         )}
       </div>

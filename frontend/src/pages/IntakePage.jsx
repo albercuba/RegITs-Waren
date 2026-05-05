@@ -189,12 +189,12 @@ export default function IntakePage() {
   }
 
   async function handleScan() {
-    await Promise.all(
-      photos.map((photo) => {
-        const ocrImageFile = photo.croppedImageFile ?? photo.originalImageFile;
-        return scanSelectedPhoto(ocrImageFile, photo.id, Boolean(photo.croppedImageFile));
-      })
-    );
+    const photosToScan = [...photos];
+    for (const photo of photosToScan) {
+      setActivePhotoId(photo.id);
+      const ocrImageFile = photo.croppedImageFile ?? photo.originalImageFile;
+      await scanSelectedPhoto(ocrImageFile, photo.id, Boolean(photo.croppedImageFile));
+    }
   }
 
   async function handleScanOriginal(photoId) {
