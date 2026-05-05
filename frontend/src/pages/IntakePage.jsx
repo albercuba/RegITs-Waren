@@ -97,6 +97,20 @@ export default function IntakePage() {
     setPhotos((current) => current.map((photo) => (photo.id === photoId ? { ...photo, ocrStatus } : photo)));
   }
 
+  function updatePhotoScanDebug(photoId, result) {
+    setPhotos((current) =>
+      current.map((photo) =>
+        photo.id === photoId
+          ? {
+              ...photo,
+              barcodeCandidates: result.barcode_candidates || [],
+              needsConfirmation: Boolean(result.needs_confirmation || result.serial_debug?.needs_confirmation),
+            }
+          : photo
+      )
+    );
+  }
+
   function handleActiveFormChange(nextForm) {
     if (!activePhoto) return;
     const sharedUpdates = {};
@@ -120,12 +134,20 @@ export default function IntakePage() {
     updatePhotoForm(activePhoto.id, nextForm);
   }
 
-  async function scanSelectedPhoto(ocrImageFile, photoId, ocrCropped = false) {
+  async function scanSelectedPhoto(ocrImageFile, photoId, ocrCropped = false, mode = "fast") {
     setScanningPhotoIds((current) => (current.includes(photoId) ? current : [...current, photoId]));
-    updatePhotoOcrStatus(photoId, ocrCropped ? "Zugeschnittenes Etikett wird gescannt..." : "Etikett wird gescannt...");
+    updatePhotoOcrStatus(
+      photoId,
+      mode === "deep"
+        ? "Genauer Scan laeuft..."
+        : ocrCropped
+          ? "Zugeschnittenes Etikett wird gescannt..."
+          : "Etikett wird gescannt..."
+    );
     setMessage(null);
     try {
-      const result = await scanPhoto(ocrImageFile, { ocrCropped });
+      const result = await scanPhoto(ocrImageFile, { ocrCropped, mode });
+      updatePhotoScanDebug(photoId, result);
       updatePhotoForm(photoId, (current) => mergeDetectedFields(current, result));
       updatePhotoOcrStatus(
         photoId,
@@ -148,6 +170,8 @@ export default function IntakePage() {
       id: createPhotoId(),
       originalImageFile: file,
       croppedImageFile: null,
+      barcodeCandidates: [],
+      needsConfirmation: false,
       previewUrl: URL.createObjectURL(file),
       form: { ...emptyForm, received_by: defaultReceivedBy, location: defaultLocation },
       ocrStatus: "Labelbereich auswaehlen oder ohne Zuschnitt scannen",
@@ -188,12 +212,12 @@ export default function IntakePage() {
     });
   }
 
-  async function handleScan() {
+  async function handleScan(mode = "fast") {
     const photosToScan = [...photos];
     for (const photo of photosToScan) {
       setActivePhotoId(photo.id);
       const ocrImageFile = photo.croppedImageFile ?? photo.originalImageFile;
-      await scanSelectedPhoto(ocrImageFile, photo.id, Boolean(photo.croppedImageFile));
+      await scanSelectedPhoto(ocrImageFile, photo.id, Boolean(photo.croppedImageFile), mode);
     }
   }
 
@@ -213,6 +237,17 @@ export default function IntakePage() {
       current.map((photo) => (photo.id === photoId ? { ...photo, croppedImageFile } : photo))
     );
     await scanSelectedPhoto(croppedImageFile, photoId, true);
+  }
+
+  function handleSelectBarcodeCandidate(candidate) {
+    if (!activePhoto) return;
+    updatePhotoForm(activePhoto.id, {
+      ...activePhoto.form,
+      serial_number: candidate.normalized || candidate.value || "",
+    });
+    setPhotos((current) =>
+      current.map((photo) => (photo.id === activePhoto.id ? { ...photo, needsConfirmation: false } : photo))
+    );
   }
 
   async function handleSubmit() {
@@ -248,7 +283,8 @@ export default function IntakePage() {
         onRemovePhoto={removePhoto}
         onCropAndScan={handleCropAndScan}
         onRetakePhoto={handleRetakePhoto}
-        onScan={handleScan}
+        onScan={() => handleScan("fast")}
+        onScanDeep={() => handleScan("deep")}
         onScanOriginal={handleScanOriginal}
         onSelectPhoto={setActivePhotoId}
         photos={photos}
@@ -261,9 +297,12 @@ export default function IntakePage() {
 
       <FormFields
         form={activeForm}
+        barcodeCandidates={activePhoto?.barcodeCandidates || []}
         locations={locations}
+        needsConfirmation={Boolean(activePhoto?.needsConfirmation)}
         ocrStatus={activePhoto ? activeOcrStatus : "Bitte zuerst ein Foto aufnehmen"}
         onChange={handleActiveFormChange}
+        onSelectBarcodeCandidate={handleSelectBarcodeCandidate}
       />
 
       <SendButton disabled={!canSend} onClick={handleSubmit} sending={sending} />

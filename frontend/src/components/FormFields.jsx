@@ -20,6 +20,15 @@ const fields = [
   ["received_by", "Angenommen von"],
 ];
 
+function candidateDescription(candidate) {
+  if (candidate.kind === "serial" && candidate.confidence === "high") return "wahrscheinlich Seriennummer";
+  if (candidate.kind === "serial") return "moegliche Seriennummer";
+  if (candidate.kind === "ean_upc") return "vermutlich EAN/UPC";
+  if (candidate.kind === "mac") return "vermutlich MAC";
+  if (candidate.kind === "url") return "vermutlich URL";
+  return "unsicherer Code";
+}
+
 function LocationDropdown({ locations, value, onChange }) {
   const [open, setOpen] = useState(false);
   const hasSelectedUnknownLocation = value && !locations.includes(value);
@@ -69,8 +78,18 @@ function LocationDropdown({ locations, value, onChange }) {
   );
 }
 
-export default function FormFields({ form, onChange, ocrStatus, locations = [] }) {
+export default function FormFields({
+  form,
+  onChange,
+  ocrStatus,
+  locations = [],
+  barcodeCandidates = [],
+  needsConfirmation = false,
+  onSelectBarcodeCandidate,
+}) {
   const setField = (name, value) => onChange({ ...form, [name]: value });
+  const showBarcodeCandidates =
+    barcodeCandidates.length > 1 || (needsConfirmation && barcodeCandidates.length > 0) || (!form.serial_number && barcodeCandidates.length > 0);
 
   return (
     <section className="panel form-panel">
@@ -98,6 +117,22 @@ export default function FormFields({ form, onChange, ocrStatus, locations = [] }
             <span>{label}</span>
             <input value={form[name]} onChange={(event) => setField(name, event.target.value)} placeholder={label} />
           </label>
+          {name === "serial_number" && showBarcodeCandidates && (
+            <div className="barcode-candidates">
+              <p>Mehrere Codes gefunden. Welcher ist die Seriennummer?</p>
+              {barcodeCandidates.map((candidate) => (
+                <button
+                  className="barcode-candidate"
+                  key={`${candidate.normalized}-${candidate.kind}`}
+                  onClick={() => onSelectBarcodeCandidate(candidate)}
+                  type="button"
+                >
+                  <strong>{candidate.normalized || candidate.value}</strong>
+                  <span>{candidateDescription(candidate)}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {name === "received_by" && (
             <label>
               <span>Standort</span>

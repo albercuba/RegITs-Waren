@@ -1,11 +1,19 @@
 from functools import lru_cache
 from pathlib import Path
+from time import perf_counter
 
 import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 from pyzbar.pyzbar import decode
 
 from app.config import get_settings
+from app.services.barcode_candidates import (
+    best_barcode_candidate,
+    classify_barcode_candidates,
+    needs_barcode_confirmation,
+    should_merge_barcode_candidate,
+    should_skip_tesseract_from_barcodes,
+)
 from app.services.parser import parse_label_data_with_debug
 
 
@@ -35,6 +43,17 @@ def _decode_barcodes(images: list[Image.Image]) -> list[str]:
                 values.append(value)
                 seen.add(value)
     return values
+
+
+def _decode_barcodes_fast(image: Image.Image) -> list[str]:
+    barcodes = _decode_barcodes([image])
+    if barcodes:
+        return barcodes
+    return _decode_barcodes([_enhanced_image(image)])
+
+
+def _decode_barcodes_deep(image: Image.Image) -> list[str]:
+    return _decode_barcodes([image, _enhanced_image(image), _threshold_image(image), *_rotations(image)[1:]])
 
 
 def _enhanced_image(image: Image.Image) -> Image.Image:
@@ -110,34 +129,61 @@ def _ocr_fallback_text(image: Image.Image) -> str:
     return _merge_text(texts)
 
 
-def scan_image(path: Path) -> dict:
-    raw_text = ""
-    barcodes: list[str] = []
-    ocr_error = ""
+def _empty_fields(serial_number: str = "") -> dict[str, str]:
+    return {
+        "serial_number": serial_number,
+        "vendor": "",
+        "model": "",
+        "asset_type": "",
+        "notes": "",
+    }
 
-    try:
-        image = ImageOps.exif_transpose(Image.open(path))
-        raw_text = _ocr_text(image)
-        barcodes = _decode_barcodes([image, _enhanced_image(image), _threshold_image(image), *_rotations(image)[1:]])
-    except Exception as exc:  # OCR tooling can fail if binaries are missing.
-        ocr_error = str(exc)
 
-    fields, serial_debug = parse_label_data_with_debug(raw_text, barcodes)
-    if serial_debug.get("needs_confirmation") and raw_text and not ocr_error:
-        try:
-            fallback_text = _ocr_fallback_text(image)
-            raw_text = _merge_text([raw_text, fallback_text])
-            fields, serial_debug = parse_label_data_with_debug(raw_text, barcodes)
-        except Exception as exc:  # Keep the fast OCR result if fallback fails.
-            ocr_error = str(exc)
+def _barcode_serial_debug(candidate: dict) -> dict:
+    return {
+        "best_guess_serial": candidate["normalized"],
+        "confidence_score": candidate["score"],
+        "confidence": min(max(candidate["score"] / 100, 0), 1),
+        "confidence_threshold": get_settings().barcode_high_confidence_score,
+        "needs_confirmation": False,
+        "source": "barcode_candidate_ranker",
+        "candidates": [
+            {
+                "value": candidate["normalized"],
+                "score": candidate["score"],
+                "source": "barcode_candidate_ranker",
+                "line": None,
+                "reasons": candidate.get("reasons", []),
+                "reason": ", ".join(candidate.get("reasons", [])),
+                "rejected": False,
+            }
+        ],
+        "normalized_text": "",
+        "warnings": [],
+    }
 
+
+def _build_scan_result(
+    fields: dict,
+    raw_text: str,
+    barcodes: list[str],
+    serial_debug: dict,
+    barcode_candidates: list[dict],
+    ocr_error: str,
+    timings: dict[str, float],
+    ocr_skipped: bool = False,
+    skip_reason: str = "",
+) -> dict:
     detected = any(fields.values())
+    needs_confirmation = needs_barcode_confirmation(barcode_candidates, fields, serial_debug)
+    serial_debug["needs_confirmation"] = bool(serial_debug.get("needs_confirmation") or needs_confirmation)
     return {
         "status": "fields_detected" if detected else "manual_input_required",
         "fields": fields,
         "raw_text": raw_text,
         "raw_ocr_text": raw_text,
         "barcodes": barcodes,
+        "barcode_candidates": barcode_candidates,
         "serial_debug": serial_debug,
         "best_guess_serial": serial_debug.get("best_guess_serial", ""),
         "confidence_score": serial_debug.get("confidence_score", 0),
@@ -146,4 +192,84 @@ def scan_image(path: Path) -> dict:
         "candidates": serial_debug.get("candidates", []),
         "warnings": serial_debug.get("warnings", []),
         "ocr_error": ocr_error,
+        "ocr_skipped": ocr_skipped,
+        "skip_reason": skip_reason,
+        "needs_confirmation": needs_confirmation,
+        "timings": timings,
     }
+
+
+def scan_image(path: Path, mode: str = "fast") -> dict:
+    scan_started = perf_counter()
+    raw_text = ""
+    barcodes: list[str] = []
+    barcode_candidates: list[dict] = []
+    ocr_error = ""
+    timings = {"barcode_decode": 0.0, "ocr_main": 0.0, "parse": 0.0, "total": 0.0}
+    mode = mode if mode in {"fast", "deep"} else get_settings().ocr_default_mode
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(path))
+        barcode_started = perf_counter()
+        barcodes = _decode_barcodes_fast(image) if mode == "fast" else _decode_barcodes_deep(image)
+        timings["barcode_decode"] = perf_counter() - barcode_started
+        barcode_candidates = classify_barcode_candidates(barcodes)
+        if should_skip_tesseract_from_barcodes(barcode_candidates):
+            best = best_barcode_candidate(barcode_candidates)
+            fields = _empty_fields(best["normalized"])
+            serial_debug = _barcode_serial_debug(best)
+            timings["total"] = perf_counter() - scan_started
+            return _build_scan_result(
+                fields,
+                raw_text,
+                barcodes,
+                serial_debug,
+                barcode_candidates,
+                ocr_error,
+                timings,
+                ocr_skipped=True,
+                skip_reason="confident_barcode",
+            )
+
+        ocr_started = perf_counter()
+        raw_text = _ocr_text(image)
+        timings["ocr_main"] = perf_counter() - ocr_started
+        if mode == "deep":
+            barcode_started = perf_counter()
+            barcodes = _decode_barcodes_deep(image)
+            timings["barcode_decode"] += perf_counter() - barcode_started
+    except Exception as exc:  # OCR tooling can fail if binaries are missing.
+        ocr_error = str(exc)
+
+    parse_started = perf_counter()
+    fields, serial_debug = parse_label_data_with_debug(raw_text, barcodes)
+    barcode_candidates = classify_barcode_candidates(barcodes, raw_text, fields.get("vendor", ""))
+    if should_merge_barcode_candidate(fields, serial_debug, barcode_candidates):
+        best = best_barcode_candidate(barcode_candidates)
+        fields["serial_number"] = best["normalized"]
+        serial_debug["best_guess_serial"] = best["normalized"]
+        serial_debug["confidence_score"] = max(serial_debug.get("confidence_score", 0), best["score"])
+        serial_debug["confidence"] = min(max(serial_debug["confidence_score"] / 100, 0), 1)
+        serial_debug["source"] = "barcode_candidate_ranker"
+
+    if serial_debug.get("needs_confirmation") and raw_text and not ocr_error:
+        try:
+            ocr_started = perf_counter()
+            fallback_text = _ocr_fallback_text(image)
+            timings["ocr_main"] += perf_counter() - ocr_started
+            raw_text = _merge_text([raw_text, fallback_text])
+            fields, serial_debug = parse_label_data_with_debug(raw_text, barcodes)
+            barcode_candidates = classify_barcode_candidates(barcodes, raw_text, fields.get("vendor", ""))
+            if should_merge_barcode_candidate(fields, serial_debug, barcode_candidates):
+                best = best_barcode_candidate(barcode_candidates)
+                fields["serial_number"] = best["normalized"]
+                serial_debug["best_guess_serial"] = best["normalized"]
+                serial_debug["confidence_score"] = max(serial_debug.get("confidence_score", 0), best["score"])
+                serial_debug["confidence"] = min(max(serial_debug["confidence_score"] / 100, 0), 1)
+                serial_debug["source"] = "barcode_candidate_ranker"
+        except Exception as exc:  # Keep the fast OCR result if fallback fails.
+            ocr_error = str(exc)
+    timings["parse"] = perf_counter() - parse_started
+    timings["total"] = perf_counter() - scan_started
+
+    return _build_scan_result(fields, raw_text, barcodes, serial_debug, barcode_candidates, ocr_error, timings)

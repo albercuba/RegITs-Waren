@@ -22,6 +22,7 @@ export async function scanPhoto(photo, options = {}) {
   if (options.ocrCropped) {
     formData.append("ocr_cropped", "true");
   }
+  formData.append("mode", options.mode || "fast");
   const response = await fetch(`${API_BASE}/scan`, {
     method: "POST",
     headers: options.ocrCropped ? { "X-OCR-Cropped": "true" } : undefined,

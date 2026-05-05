@@ -63,6 +63,9 @@ APP_SECRET_KEY=dein-langer-zufaelliger-schluessel
 ADMIN_PASSWORD=dein-admin-passwort
 MAX_UPLOAD_MB=12
 CORS_ORIGINS=http://localhost:8081
+OCR_DEFAULT_MODE=fast
+BARCODE_HIGH_CONFIDENCE_SCORE=50
+BARCODE_MARGIN_OVER_SECOND=25
 ```
 
 3. Starten:
@@ -109,6 +112,10 @@ Das Backend-Image installiert Tesseract OCR und zbar. Seriennummern werden mit l
 Nach dem Aufnehmen oder Hochladen eines Fotos zeigt die Wareneingang-Seite einen optionalen Zuschnitt fuer den Labelbereich. Mitarbeitende koennen den Rahmen enger um das Etikett ziehen und dann `Zuschneiden & scannen` auswaehlen. Das kann OCR schneller und genauer machen, weil Tesseract nur den relevanten Bildausschnitt verarbeitet. Mit `Ohne Zuschneiden scannen` bleibt der bisherige Ablauf erhalten und das komplette Foto wird erkannt.
 
 Der Zuschnitt wird nur fuer OCR verwendet. Das urspruengliche Foto bleibt fuer den finalen Wareneingangseintrag und den E-Mail-Anhang erhalten, soweit ein Foto eingereicht wird.
+
+Beim Scannen versucht das Backend zuerst, Barcodes schnell zu decodieren. Tesseract wird nur uebersprungen, wenn ein Barcode-Kandidat mit hoher Sicherheit eine Seriennummer ist. Bei mehreren aehnlich wahrscheinlichen Codes laeuft weiterhin OCR; wenn die App unsicher bleibt, kann die korrekte Seriennummer im Formular aus den gefundenen Codes ausgewaehlt werden.
+
+`Alle scannen` nutzt den schnellen Standardmodus: Barcode zuerst, OCR nur bei Bedarf. `Genauer scannen` verwendet den tiefen Modus mit zusaetzlichen Barcode-Varianten und OCR-Fallbacks.
 
 Wichtige Regeln:
 

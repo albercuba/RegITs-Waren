@@ -95,7 +95,7 @@ def _is_truthy(value: str | bool | None) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "ja", "on"}
 
 
-def _store_scan_debug(path: Path, result: dict, ocr_cropped: bool = False) -> int:
+def _store_scan_debug(path: Path, result: dict, ocr_cropped: bool = False, mode: str = "fast") -> int:
     with get_db() as conn:
         cursor = conn.execute(
             """
@@ -125,13 +125,15 @@ def _store_scan_debug(path: Path, result: dict, ocr_cropped: bool = False) -> in
 def scan_label(
     photo: UploadFile = File(...),
     ocr_cropped: str | None = Form(default=None),
+    mode: str = Form(default="fast"),
     x_ocr_cropped: str | None = Header(default=None, alias="X-OCR-Cropped"),
 ) -> dict:
     cropped = _is_truthy(ocr_cropped) or _is_truthy(x_ocr_cropped)
     path = _save_upload(photo, "scan")
-    result = scan_image(path)
+    result = scan_image(path, mode=mode)
     result["ocr_cropped"] = cropped
-    result["debug_id"] = _store_scan_debug(path, result, cropped)
+    result["mode"] = mode if mode in {"fast", "deep"} else "fast"
+    result["debug_id"] = _store_scan_debug(path, result, cropped, result["mode"])
     return result
 
 
@@ -139,13 +141,15 @@ def scan_label(
 def scan_label_debug(
     photo: UploadFile = File(...),
     ocr_cropped: str | None = Form(default=None),
+    mode: str = Form(default="deep"),
     x_ocr_cropped: str | None = Header(default=None, alias="X-OCR-Cropped"),
 ) -> dict:
     cropped = _is_truthy(ocr_cropped) or _is_truthy(x_ocr_cropped)
     path = _save_upload(photo, "scan-debug")
-    result = scan_image(path)
+    result = scan_image(path, mode=mode)
     result["ocr_cropped"] = cropped
-    result["debug_id"] = _store_scan_debug(path, result, cropped)
+    result["mode"] = mode if mode in {"fast", "deep"} else "deep"
+    result["debug_id"] = _store_scan_debug(path, result, cropped, result["mode"])
     return result
 
 

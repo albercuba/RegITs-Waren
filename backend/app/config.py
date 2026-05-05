@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     ocr_max_dimension: int = 1800
     ocr_timeout_seconds: int = 8
     ocr_fallback_timeout_seconds: int = 3
+    ocr_default_mode: str = "fast"
+    barcode_high_confidence_score: int = 50
+    barcode_margin_over_second: int = 25
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

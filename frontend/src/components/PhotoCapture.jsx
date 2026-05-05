@@ -176,6 +176,7 @@ export default function PhotoCapture({
   onFileChange,
   onRemovePhoto,
   onScan,
+  onScanDeep,
   onCropAndScan,
   onRetakePhoto,
   onScanOriginal,
@@ -236,10 +237,16 @@ export default function PhotoCapture({
           <input accept="image/*" capture="environment" hidden multiple onChange={onFileChange} type="file" />
         </label>
         {hasPhotos && (
-          <button className="button secondary" disabled={disabled || scanning} onClick={onScan} type="button">
-            <ScanLine size={20} />
-            <span>{scanning ? `Scanne ${scannedPhotoCount}/${photos.length}` : "Alle scannen"}</span>
-          </button>
+          <>
+            <button className="button secondary" disabled={disabled || scanning} onClick={onScan} type="button">
+              <ScanLine size={20} />
+              <span>{scanning ? `Scanne ${scannedPhotoCount}/${photos.length}` : "Alle scannen"}</span>
+            </button>
+            <button className="button ghost" disabled={disabled || scanning} onClick={onScanDeep} type="button">
+              <ScanLine size={20} />
+              <span>Genauer scannen</span>
+            </button>
+          </>
         )}
       </div>
     </section>
